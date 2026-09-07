@@ -7,13 +7,9 @@ interface Props {
   t: Strings
   highlight: number | null
   onHighlight: (index: number | null) => void
-  /** Beads already ticked off, per palette index. */
-  progress: Map<number, number>
 }
 
-export default function BeadCounts({
-  counts, total, t, highlight, onHighlight, progress,
-}: Props) {
+export default function BeadCounts({ counts, total, t, highlight, onHighlight }: Props) {
   const max = counts[0]?.count ?? 1
   return (
     <div className="counts">
@@ -28,31 +24,16 @@ export default function BeadCounts({
 
       <ol className="counts-list">
         {counts.map(({ bead, count }) => {
-          const done = progress.get(bead.index) ?? 0
           const on = highlight === bead.index
           return (
             <li key={bead.code} className={on ? 'on' : ''}>
-              <button
-                onClick={() => onHighlight(on ? null : bead.index)}
-                aria-pressed={on}
-                title={t.workHint}
-              >
+              <button onClick={() => onHighlight(on ? null : bead.index)} aria-pressed={on}>
                 <span className="swatch" style={{ background: bead.hex }} aria-hidden="true" />
                 <span className="cc-code">{bead.code}</span>
                 <span className="cc-hex">{bead.hex}</span>
-                <span className="cc-count">
-                  {done > 0 && <em>{done.toLocaleString()}/</em>}
-                  {count.toLocaleString()}
-                </span>
+                <span className="cc-count">{count.toLocaleString()}</span>
               </button>
               <span className="cc-bar" style={{ width: `${(count / max) * 100}%` }} aria-hidden="true" />
-              {done > 0 && (
-                <span
-                  className="cc-done"
-                  style={{ width: `${(done / count) * (count / max) * 100}%` }}
-                  aria-hidden="true"
-                />
-              )}
             </li>
           )
         })}

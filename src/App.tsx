@@ -4,23 +4,36 @@ import BeadCounts from './components/BeadCounts'
 import Uploader from './components/Uploader'
 import { loadImageData } from './lib/loadImage'
 import { CANVAS_SIZES, fitGrid, pixelate, type CanvasSize, type SampleMethod } from './lib/pixelate'
-import { buildChart, EMPTY } from './lib/chart'
+import { buildChart } from './lib/chart'
 import { buildMergePlan, simplify } from './lib/simplify'
 import {
-  deleteProject, encodePlaced, decodePlaced, exportProjectFile, imageDataToUrl,
-  importProjectFile, listProjects, newId, saveProject, StorageFullError,
-  urlToImageData, type SavedProject,
+  deleteProject, exportProjectFile, imageDataToUrl, importProjectFile, listProjects,
+  newId, saveProject, StorageFullError, urlToImageData, type SavedProject,
 } from './lib/projects'
 import { STRINGS, type Lang, type Strings } from './i18n'
 
-/** Options for the tidy slider, in beads. 0 disables it. */
-const ISLAND_STOPS = [0, 2, 3, 4, 6, 8]
+/** Stray-bead cleanup is built and tested (see simplify.ts) but is not exposed
+ *  in the UI yet, so it stays off. */
+const MIN_ISLAND = 0
+
+const THEME_KEY = 'pindou.theme'
 
 export default function App() {
   const [lang, setLang] = useState<Lang>(() =>
     navigator.language.toLowerCase().startsWith('zh') ? 'zh' : 'en',
   )
   const t: Strings = STRINGS[lang]
+
+  const [dark, setDark] = useState<boolean>(() => {
+    const saved = localStorage.getItem(THEME_KEY)
+    if (saved === 'dark' || saved === 'light') return saved === 'dark'
+    return window.matchMedia('(prefers-color-scheme: dark)').matches
+  })
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+    localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light')
+  }, [dark])
 
   const [image, setImage] = useState<ImageData | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -31,10 +44,7 @@ export default function App() {
   // Stored as a target colour count rather than a merge-step count: the step
   // count is meaningless once the underlying chart changes, the target is not.
   const [targetColours, setTargetColours] = useState<number | null>(null)
-  const [islandStop, setIslandStop] = useState(0)
-
   const [highlight, setHighlight] = useState<number | null>(null)
-  const [placedState, setPlacedState] = useState<{ w: number; h: number; data: Uint8Array } | null>(null)
 
   const [projects, setProjects] = useState<SavedProject[]>(() => listProjects())
   const [projectId, setProjectId] = useState<string | null>(null)
@@ -62,49 +72,14 @@ export default function App() {
 
   const maxColours = plan?.initialCount ?? 1
   const target = Math.min(targetColours ?? maxColours, maxColours)
-  const minIsland = ISLAND_STOPS[islandStop]
 
   // Stage C: simplification. Re-runs on every slider movement, in ~1ms.
   const chart = useMemo(() => {
     if (!base || !plan) return null
-    return simplify(base, plan, Math.max(0, plan.initialCount - target), minIsland)
-  }, [base, plan, target, minIsland])
+    return simplify(base, plan, Math.max(0, plan.initialCount - target), MIN_ISLAND)
+  }, [base, plan, target])
 
-  /* ---------- placed-bead progress ---------- */
-
-  const placed = useMemo(() => {
-    if (!chart) return null
-    if (placedState && placedState.w === chart.width && placedState.h === chart.height) {
-      return placedState.data
-    }
-    return new Uint8Array(chart.width * chart.height)
-  }, [chart, placedState])
-
-  const togglePlaced = useCallback((cell: number) => {
-    if (!chart || chart.cells[cell] === EMPTY) return
-    const { width: w, height: h } = chart
-    // Functional update, because ticking beads off comes in fast bursts: a
-    // handler that copied the array from its closure would have every tap in
-    // a burst overwrite the previous one, and only the last would survive.
-    setPlacedState((prev) => {
-      const base = prev && prev.w === w && prev.h === h ? prev.data : new Uint8Array(w * h)
-      const next = new Uint8Array(base)
-      next[cell] = next[cell] ? 0 : 1
-      return { w, h, data: next }
-    })
-  }, [chart])
-
-  const progress = useMemo(() => {
-    const m = new Map<number, number>()
-    if (!chart || !placed) return m
-    for (let i = 0; i < chart.cells.length; i++) {
-      if (!placed[i] || chart.cells[i] === EMPTY) continue
-      m.set(chart.cells[i], (m.get(chart.cells[i]) ?? 0) + 1)
-    }
-    return m
-  }, [chart, placed])
-
-  // A colour can vanish under the simplify slider while it is being placed.
+  // A colour can vanish under the simplify slider while it is isolated.
   useEffect(() => {
     if (highlight === null || !chart) return
     if (!chart.counts.some((c) => c.bead.index === highlight)) setHighlight(null)
@@ -119,9 +94,7 @@ export default function App() {
       setProjectId(null)
       setProjectName(file.name.replace(/\.[^.]+$/, '').slice(0, 40))
       setTargetColours(null)
-      setIslandStop(0)
       setHighlight(null)
-      setPlacedState(null)
     } catch {
       setImage(null)
       setError(STRINGS[lang].badImage)
@@ -135,17 +108,9 @@ export default function App() {
       setImage(img)
       setCanvasSize(p.settings.canvasSize)
       setMethod(p.settings.method)
-      setIslandStop(Math.max(0, ISLAND_STOPS.indexOf(p.settings.minIsland)))
       setProjectId(p.id)
       setProjectName(p.name)
       setHighlight(null)
-      const { width, height } = fitGrid(img.width, img.height, p.settings.canvasSize)
-      setPlacedState(
-        p.placed
-          ? { w: width, h: height, data: decodePlaced(p.placed, width * height) }
-          : null,
-      )
-      // Applied last: the chart it refers to has to exist first.
       setTargetColours(p.settings.mergeSteps > 0 ? p.settings.mergeSteps : null)
     } catch {
       setError(STRINGS[lang].badImage)
@@ -161,8 +126,7 @@ export default function App() {
         name: projectName.trim() || t.untitled,
         savedAt: Date.now(),
         image: imageDataToUrl(image),
-        settings: { canvasSize, method, mergeSteps: target, minIsland },
-        placed: placed ? encodePlaced(placed) : undefined,
+        settings: { canvasSize, method, mergeSteps: target, minIsland: MIN_ISLAND },
       })
       setProjects(list)
       setProjectId(id)
@@ -171,7 +135,7 @@ export default function App() {
     } catch (e) {
       setError(e instanceof StorageFullError ? t.storageFull : String(e))
     }
-  }, [image, chart, projectId, projectName, canvasSize, method, target, minIsland, placed, t])
+  }, [image, chart, projectId, projectName, canvasSize, method, target, t])
 
   const currentProject = useCallback((): SavedProject | null => {
     if (!image) return null
@@ -180,10 +144,9 @@ export default function App() {
       name: projectName.trim() || t.untitled,
       savedAt: Date.now(),
       image: imageDataToUrl(image),
-      settings: { canvasSize, method, mergeSteps: target, minIsland },
-      placed: placed ? encodePlaced(placed) : undefined,
+      settings: { canvasSize, method, mergeSteps: target, minIsland: MIN_ISLAND },
     }
-  }, [image, projectId, projectName, canvasSize, method, target, minIsland, placed, t])
+  }, [image, projectId, projectName, canvasSize, method, target, t])
 
   /* ---------- render ---------- */
 
@@ -203,6 +166,12 @@ export default function App() {
               {t.reset}
             </button>
           )}
+          <button
+            className="ghost icon"
+            onClick={() => setDark((d) => !d)}
+            aria-label={dark ? t.lightMode : t.darkMode}
+            title={dark ? t.lightMode : t.darkMode}
+          >{dark ? '☀' : '☾'}</button>
           <div className="langswitch" role="group" aria-label="Language">
             <button className={lang === 'en' ? 'on' : ''} onClick={() => setLang('en')}>EN</button>
             <button className={lang === 'zh' ? 'on' : ''} onClick={() => setLang('zh')}>中文</button>
@@ -296,25 +265,13 @@ export default function App() {
 
               <div className="ctrl grow">
                 <label title={t.colourCountHint}>
-                  {t.colourCount} <b>{chart.counts.length}</b>
-                  {target < maxColours && <span className="was">{t.originalColours} {maxColours}</span>}
+                  {t.simplifyColours}
+                  <span className="sub">{t.currentColours}: <b>{chart.counts.length}</b></span>
                 </label>
                 <input
                   type="range" min={1} max={maxColours} step={1} value={target}
                   onChange={(e) => setTargetColours(Number(e.target.value))}
-                  aria-label={t.colourCount}
-                />
-              </div>
-
-              <div className="ctrl">
-                <label title={t.cleanupHint}>
-                  {t.cleanup}{' '}
-                  <b>{minIsland === 0 ? t.cleanupOff : `<${minIsland} ${t.cleanupUnit}`}</b>
-                </label>
-                <input
-                  type="range" min={0} max={ISLAND_STOPS.length - 1} step={1} value={islandStop}
-                  onChange={(e) => setIslandStop(Number(e.target.value))}
-                  aria-label={t.cleanup}
+                  aria-label={t.simplifyColours}
                 />
               </div>
 
@@ -324,13 +281,7 @@ export default function App() {
               </dl>
             </div>
 
-            <ChartCanvas
-              chart={chart}
-              showGrid={showGrid}
-              highlight={highlight}
-              placed={placed}
-              onTogglePlaced={togglePlaced}
-            />
+            <ChartCanvas chart={chart} showGrid={showGrid} highlight={highlight} dark={dark} />
 
             <div className="stage-foot">
               <p className="stage-hint">
@@ -357,13 +308,8 @@ export default function App() {
                 <span className="swatch" style={{ background: chart.counts.find(c => c.bead.index === highlight)?.bead.hex }} />
                 <b>{chart.counts.find((c) => c.bead.index === highlight)?.bead.code}</b>
                 <span className="wb-progress">
-                  {(progress.get(highlight) ?? 0).toLocaleString()} /{' '}
-                  {(chart.counts.find((c) => c.bead.index === highlight)?.count ?? 0).toLocaleString()} {t.done}
+                  {(chart.counts.find((c) => c.bead.index === highlight)?.count ?? 0).toLocaleString()}
                 </span>
-                <button
-                  className="ghost small"
-                  onClick={() => setPlacedState({ w: chart.width, h: chart.height, data: new Uint8Array(chart.width * chart.height) })}
-                >{t.clearProgress}</button>
               </div>
             )}
             <BeadCounts
@@ -372,7 +318,6 @@ export default function App() {
               t={t}
               highlight={highlight}
               onHighlight={setHighlight}
-              progress={progress}
             />
             <p className="muted small">{t.savedInBrowser}</p>
           </aside>

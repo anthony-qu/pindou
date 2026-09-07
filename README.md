@@ -16,19 +16,18 @@ leaves your device.
    - **Sharp** takes the dominant colour in each cell — right for anime, logos and sprites,
      where averaging would smear outlines into halos.
 4. **Match** every cell to its nearest Mard bead using CIEDE2000 in CIELAB.
-5. **Simplify**, with two sliders that each do one thing:
-   - **Colours** merges bead codes that look alike, closest and least-used first. A photo lands
-     at 150+ codes; pull this down and watch the count fall one merge at a time until it is
-     something you can actually buy and bead.
-   - **Tidy** absorbs stray beads smaller than the threshold into what surrounds them.
-
-   Neither blurs — flat areas and hard edges are untouched.
+5. **Simplify colors** — one slider that merges bead codes which look alike, closest and
+   least-used first. A photo lands at 150+ codes; pull this down and watch the count fall one
+   merge at a time until it is something you can actually buy and bead. It does not blur:
+   flat areas and hard edges are untouched.
 6. **Read the chart** — pan and zoom (pinch on a phone), codes appear as you zoom in,
    with dashed gridlines every 5 cells and solid ones every 10 so you can count your place.
-7. **Bead it** — pick a colour in the list to fade everything else back, then tap beads to tick
-   them off as you place them.
+7. **Isolate a colour** — pick one in the bead list to fade everything else back, so you can
+   place every A18 in one pass.
 8. **Shop from the bead list** — every code used, with its exact count.
 9. **Save** — projects are kept in this browser, and can be exported to a file you control.
+
+Light and dark themes, English and Chinese, and built mobile-first.
 
 Transparent areas of the image become empty holes rather than white beads.
 

@@ -7,6 +7,17 @@ Order is roughly the order they should be built.
 
 ## Still to build
 
+### R2 — "Tidy" slider (remove isolated beads)  *(implemented, not exposed)*
+
+A lone red bead stranded in a field of blue is a genuine annoyance when beading. A mode filter
+fixes exactly this. Kept as its **own control**, deliberately not folded into R1 — it is a different
+axis (spatial noise, not color count), and two sliders that each do one comprehensible thing beat
+one that does both muddily.
+
+`removeIslands` in `src/lib/simplify.ts` is written and covered by tests; only the UI control
+was pulled, and `MIN_ISLAND` in `App.tsx` holds it at off. Re-exposing it is a slider, not an
+algorithm.
+
 ### R3 — Background removal
 
 Two different jobs, both wanted:
@@ -97,21 +108,16 @@ Rejected alternatives:
 - *One spatially-aware slider* combining both effects. Elegant, but you cannot then say
   "merge less, clean more", and the behaviour is much harder to predict.
 
-### R2 — "Tidy" slider (remove isolated beads)
-
-A lone red bead stranded in a field of blue is a genuine annoyance when beading. A mode filter
-fixes exactly this. Kept as its **own control**, deliberately not folded into R1 — it is a different
-axis (spatial noise, not color count), and two sliders that each do one comprehensible thing beat
-one that does both muddily.
-
 ### R5 — Save & reopen projects
 
 `localStorage` for the project list, plus a **download / upload project file** button as the backup
 the user actually controls. No backend, no accounts. Clearing browser data loses saves, which is
 exactly why the download button is not optional.
 
-### R6 — Work mode
+### R6 — Work mode (shipped as colour isolation)
 
-Dim everything except one bead color at a time, so you place all the A1s, then all the B7s.
-Plus progress ticking — mark beads or rows as placed. This is the feature that makes beading
-from the phone screen actually pleasant.
+Dim everything except one bead colour at a time, so you place all the A1s, then all the B7s.
+
+Progress ticking shipped alongside it and was then removed at the user's request: you do not
+interact with the screen while your hands are placing beads, so the taps, the tick marks and
+the stored progress were all cost with no benefit.

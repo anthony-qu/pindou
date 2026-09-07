@@ -29,10 +29,6 @@ export interface SavedProject {
   /** Downscaled source image, data URL. */
   image: string
   settings: ProjectSettings
-  /** Base64 of one byte per cell: which beads have been placed. */
-  placed?: string
-  /** Small preview of the chart itself, data URL. */
-  thumb?: string
 }
 
 /* ---------- image <-> data URL ---------- */
@@ -76,28 +72,6 @@ export function urlToImageData(url: string): Promise<ImageData> {
     el.onerror = () => reject(new Error('stored image could not be decoded'))
     el.src = url
   })
-}
-
-/* ---------- placed-bead progress ---------- */
-
-export function encodePlaced(placed: Uint8Array): string {
-  let s = ''
-  // Chunked: String.fromCharCode with a whole 10k array blows the call stack.
-  for (let i = 0; i < placed.length; i += 8192) {
-    s += String.fromCharCode(...placed.subarray(i, i + 8192))
-  }
-  return btoa(s)
-}
-
-export function decodePlaced(s: string, length: number): Uint8Array {
-  const out = new Uint8Array(length)
-  try {
-    const bin = atob(s)
-    for (let i = 0; i < Math.min(length, bin.length); i++) out[i] = bin.charCodeAt(i)
-  } catch {
-    /* corrupt progress is not worth failing a load over */
-  }
-  return out
 }
 
 /* ---------- store ---------- */

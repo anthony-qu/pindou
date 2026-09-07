@@ -110,27 +110,40 @@ why are recorded in ROADMAP.md under the shipped R1 entry.
 - Bead count list: swatch, code, count, sorted by count descending.
 - Phone is a first-class target: the author intends to bead with the phone next to the board.
 
-## 7. Work mode
+## 7. Colour isolation
 
-The phone is the device that sits next to the pegboard, so placing beads is a first-class
-mode, not a view option. Selecting a colour fades everything else back and outlines that
-colour; tapping a bead ticks it off; a placed bead shows its tick instead of its code,
-because drawing both in one cell leaves neither readable.
+Selecting a colour in the bead list fades everything else back and outlines the perimeter
+of each cluster of that colour, so you can find every A18 at a glance.
 
-Ticking comes in fast bursts, so the progress update must be functional — a handler that
-copied the array out of its closure would let every tap in a burst overwrite the previous
-one, and only the last would survive.
+Only the perimeter is outlined — the edges whose neighbour is a different colour. Boxing
+each cell individually lays two lines side by side between adjacent highlighted cells and
+reads as heavy black. It is gated at the same zoom as the ordinary per-cell gridlines so it
+disappears on zoom out with them.
+
+Tap-to-tick progress tracking was built and then removed: in practice you do not touch the
+screen while your hands are busy placing beads.
 
 ## 8. Saved projects
 
 localStorage, plus export/import of a `.pindou.json` file. Same-device by design.
+Projects written by older versions still open — removed fields are simply ignored.
 Stored source images are re-encoded at most 640px on the longest side — the grid is at most
 104 cells, so more resolution buys nothing and it keeps roughly 90 projects inside the
 storage budget. PNG where transparency must survive, JPEG otherwise.
 
 Clearing site data loses saves. That is exactly why the export button is not optional.
 
-## 9. Measured cost
+## 9. Theme
+
+Light and dark, toggled in the top bar and remembered, defaulting to the system setting.
+Dark mode darkens the page, the panels, and the surround behind the chart.
+
+Two things stay deliberately fixed across themes. Gridlines stay dark, because they mostly
+cross beads whose colours are arbitrary and a light line would vanish on the many pale
+beads. Empty holes stay a mid-grey checkerboard rather than going near-black, so those dark
+gridlines still read where they cross a hole.
+
+## 10. Measured cost
 
 Worst case, 104×104 with every cell a distinct colour: stage A ~6ms, stage B ~20ms.
 Merge plan ~8ms, computed once per chart. A slider move re-runs only stage C: ~1ms of work,
