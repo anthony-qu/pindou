@@ -1,0 +1,14 @@
+{
+  // Static assets only: this site has no server-side logic, so there is no
+  // Worker script and no "main" field. Without this file, wrangler tries to
+  // auto-configure the project as a Vite framework app, which needs Vite 6+
+  // and fails on Vite 5.
+  "name": "pindou",
+  "compatibility_date": "2026-09-07",
+  "assets": {
+    "directory": "./dist",
+    // Every route is the same page; there is no client-side router, but this
+    // also means a stray path serves the app rather than a bare 404.
+    "not_found_handling": "single-page-application"
+  }
+}
