@@ -1,7 +1,9 @@
-# Pindou · 拼豆
+# 拼好豆 · 拼豆图纸生成
 
 Turns an image into a pixel-bead (拼豆 / perler) chart using the **Mard 291-colour palette**,
 and shows it as a zoomable grid where every cell carries its bead code.
+
+The interface is bilingual, but the name is not translated: it is 拼好豆 in both languages.
 
 Everything runs in the browser. No server, no accounts, no uploads — your image never
 leaves your device.

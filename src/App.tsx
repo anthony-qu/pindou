@@ -170,7 +170,11 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <div className="brand">
-          <span className="brand-mark" aria-hidden="true">▩</span>
+          <img
+            className="brand-mark"
+            src={`${import.meta.env.BASE_URL}icon.png`}
+            alt="" aria-hidden="true" width={34} height={34}
+          />
           <div>
             <h1>{t.title}</h1>
             <p>{t.tagline}</p>

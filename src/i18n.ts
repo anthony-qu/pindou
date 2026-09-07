@@ -9,8 +9,8 @@ export type Strings = { [K in keyof (typeof STRINGS)['en']]: string }
 
 export const STRINGS = {
   en: {
-    title: 'Pindou',
-    tagline: 'Turn an image into a Mard bead chart',
+    title: '拼好豆',
+    tagline: '拼豆图纸生成',
     privacy: 'Runs entirely in your browser. Your image is never uploaded.',
     drop: 'Drop an image here, or click to choose',
     dropHint: 'PNG, JPG, WebP or GIF. Transparent areas become empty holes.',
@@ -94,8 +94,8 @@ export const STRINGS = {
     refineMean: 'Mean', refineCentre: 'Bin centre',
   },
   zh: {
-    title: '拼豆',
-    tagline: '把图片转成 Mard 色号图纸',
+    title: '拼好豆',
+    tagline: '拼豆图纸生成',
     privacy: '全部在你的浏览器里运行，图片不会被上传。',
     drop: '把图片拖到这里，或点击选择',
     dropHint: '支持 PNG、JPG、WebP、GIF。透明区域会留空不放豆。',

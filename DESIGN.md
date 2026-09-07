@@ -1,4 +1,4 @@
-# Pindou — image to Mard bead chart
+# 拼好豆 — image to Mard bead chart
 
 Converts an image into a pixel-bead (拼豆 / perler) template using the Mard 291-color palette,
 and displays it as a zoomable grid where every cell shows its bead code.
@@ -29,6 +29,12 @@ Consequences, accepted deliberately:
 - Grid rendered to `<canvas>`, not DOM. At 104x104 that is 10,816 cells; DOM would crawl.
 - i18n (English / Chinese) with a switch, wired in from the first commit.
   Retrofitting translation into a finished UI is far more painful than building with it.
+  The product name 拼好豆 and its subtitle 拼豆图纸生成 are deliberately *not* translated,
+  and read the same in both languages.
+- The icon is pixel art, so it is rebuilt from its native 25x25 grid, scaled by whole
+  pixels only, and rendered with `image-rendering: pixelated`. Its white background is
+  removed by flood fill from the corners rather than by keying out white, so any white
+  inside the artwork survives.
 - Deployed to a free static host (Cloudflare Pages or Netlify) from a GitHub repo.
   Public URL, intended for strangers to use, not just the author.
 
