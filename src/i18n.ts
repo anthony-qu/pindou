@@ -57,40 +57,40 @@ export const STRINGS = {
 
     advanced: 'Advanced',
     advancedTitle: 'Advanced conversion',
-    advancedIntro: 'Seven settings that visibly change the chart. Defaults reproduce the standard conversion.',
+    advancedIntro: 'Seven knobs for how the picture becomes beads. The defaults are the normal conversion.',
     resetDefaults: 'Reset to defaults',
     done: 'Done',
     modified: 'modified',
     sharpOnly: 'Sharp only',
-    noAlpha: 'no transparency here',
+    noAlpha: 'no see-through parts',
 
     kernelLabel: 'Kernel shape',
-    kernelHint: 'How source pixels inside a cell are weighted. Box treats a pixel at the cell edge the same as one at its centre; the others fall off with distance, and the last two reach into neighbouring cells and sharpen at the cost of ringing.',
+    kernelHint: 'Every bead covers a small patch of the picture and blends the colors there. This picks how much each pixel counts. Box: all the same. Tent and Gauss: the middle counts more. Mitchell and Lanczos also peek at the patch next door — crisper edges, but faint halos.',
     kernelBox: 'Box', kernelTent: 'Tent', kernelGaussian: 'Gauss',
     kernelMitchell: 'Mitchell', kernelLanczos: 'Lanczos',
 
     boundaryLabel: 'Boundary handling',
-    boundaryHint: 'A cell is rarely a whole number of pixels wide. Snap gives each cell whole pixels, so the odd fraction lands on one side. Exact weights the edge pixels by how much of them the cell really covers.',
+    boundaryHint: 'A patch rarely lands on whole pixels. Snap rounds to whole ones. Exact splits the pixel on the edge and takes only the part that belongs. Exact is tidier, but the difference is far too small to see.',
     boundarySnap: 'Snap', boundaryExact: 'Exact',
 
     alphaLabel: 'Alpha threshold',
-    alphaHint: 'How much of a cell must be opaque before it becomes a bead. Lower keeps thin features; higher gives a tighter silhouette.',
+    alphaHint: 'Only does anything on see-through pictures. How full a patch must be before a bead goes there. Low keeps thin bits like whiskers. High gives a cleaner outline.',
 
     binsLabel: 'Bin width',
-    binsHint: 'How close two colors must be to count as the same when finding a cell\u2019s dominant color. Wider bins flatten more; narrower bins keep detail but turn to noise on photos.',
+    binsHint: 'Sharp picks the most common color in each patch. First it sorts the colors into bins — little boxes of similar colors. Wide bins treat more colors as the same. Narrow bins are fussier, and go speckly on photos.',
     binsUnit: 'levels',
 
     mergeLabel: 'Bin merging',
-    mergeHint: 'Pools each bin with its neighbours before picking the winner, so two near-identical colors split across a bin edge are not both beaten by a third.',
+    mergeHint: 'Two nearly identical colors can land in different bins and both lose to a third. This lets neighbouring bins team up first. Helps photos; on flat drawings it softens edges, so leave it off there.',
     mergeOff: 'off',
     mergeUnit: 'bins',
 
     dominanceLabel: 'Dominance threshold',
-    dominanceHint: 'How much of a cell the dominant color must cover before Sharp trusts it. Below this the cell is averaged instead, so flat areas stay sharp while gradients stay smooth.',
+    dominanceHint: 'If one color clearly fills most of a patch, use it. If nothing clearly wins, like in a smooth gradient, blend instead. Higher means blend more often.',
     dominanceOff: 'off (always dominant)',
 
     refineLabel: 'Bin refinement',
-    refineHint: 'The winning bin\u2019s color: the mean of the pixels in it, which is accurate, or the bin centre, which quantises output to the bin grid and makes the bin width plainly visible.',
+    refineHint: 'Once a bin wins, which color to use. Mean is the true average of the pixels in it, so it is accurate. Bin centre snaps to the middle of the bin: blockier, and it makes Bin width easy to see.',
     refineMean: 'Mean', refineCentre: 'Bin centre',
   },
   zh: {
@@ -142,40 +142,40 @@ export const STRINGS = {
 
     advanced: '高级',
     advancedTitle: '高级转换设置',
-    advancedIntro: '七个会明显改变图纸的设置。默认值等于标准转换。',
+    advancedIntro: '七个旋钮，控制图片怎么变成豆子。默认就是平常的转换方式。',
     resetDefaults: '恢复默认',
     done: '完成',
     modified: '已修改',
     sharpOnly: '仅锐化',
-    noAlpha: '此图无透明区',
+    noAlpha: '此图没有透明处',
 
     kernelLabel: '核形状',
-    kernelHint: '一格内的源像素如何加权。Box 把边缘像素和中心像素同等对待；其余按距离衰减，最后两种还会伸进相邻格，锐利但会有振铃。',
+    kernelHint: '每颗豆子负责图上的一小块，把那里的颜色混在一起。这里决定哪些像素更算数。Box：全都一样算。三角和高斯：中间更算数。Mitchell 和 Lanczos 还会往旁边一块瞄一眼——边缘更清楚，但可能出现淡淡的光晕。',
     kernelBox: 'Box', kernelTent: '三角', kernelGaussian: '高斯',
     kernelMitchell: 'Mitchell', kernelLanczos: 'Lanczos',
 
     boundaryLabel: '边界处理',
-    boundaryHint: '一格的宽度很少是整数个像素。Snap 让每格取整像素，多出的零头整个落到一边；Exact 按实际覆盖比例给边缘像素加权。',
+    boundaryHint: '一小块很少正好是整数个像素。取整：凑成整像素。精确：把边上那个像素切开，只取属于自己的那部分。精确更规整，但差别小到几乎看不出来。',
     boundarySnap: '取整', boundaryExact: '精确',
 
     alphaLabel: 'Alpha 阈值',
-    alphaHint: '一格要有多少不透明才放豆子。调低能保留细小结构，调高轮廓更紧凑。',
+    alphaHint: '只对有透明区域的图有用。一小块要被填得多满，才在那里放一颗豆子。调低：留住胡须那样的细小部分。调高：轮廓更干净。',
 
     binsLabel: '分箱宽度',
-    binsHint: '判断一格主色时，两个颜色要多接近才算同一种。分箱越宽越平整；越窄越保留细节，但照片会变成噪点。',
+    binsHint: '锐化会挑出一小块里最常见的颜色。它先把颜色分进一个个「箱子」——每个箱子装一批相近的颜色。箱子宽：更多颜色算作同一种。箱子窄：更挑剔，照片会变得花花点点。',
     binsUnit: '级',
 
     mergeLabel: '分箱合并',
-    mergeHint: '选主色之前先把每个箱和邻箱合并，避免两个几乎相同、却被箱边界分开的颜色一起输给第三个。',
+    mergeHint: '两个几乎一样的颜色可能掉进不同的箱子，结果一起输给第三个。这个让相邻的箱子先联手。对照片有帮助；画面平整的图会让边缘变糊，那就关掉。',
     mergeOff: '关',
     mergeUnit: '箱',
 
     dominanceLabel: '主色占比阈值',
-    dominanceHint: '主色要占一格多大比例，锐化才采用它。低于该值就改用平均，于是平色区保持锐利、渐变区保持平滑。',
+    dominanceHint: '如果某个颜色明显占了一小块的大半，就用它。如果谁也没明显赢，比如平滑的渐变，那就改成混合。调高＝更常用混合。',
     dominanceOff: '关（总用主色）',
 
     refineLabel: '箱内取值',
-    refineHint: '获胜箱的颜色取值：箱内像素的平均值更准确；取箱中心则把输出量化到分箱网格上，能直观看出分箱宽度。',
+    refineHint: '箱子赢了之后，用哪个颜色。平均：箱子里那些像素的真实平均值，比较准。箱中心：直接取箱子正中间的颜色，更块状，也更容易看出「分箱宽度」的效果。',
     refineMean: '平均', refineCentre: '箱中心',
   },
 } as const
