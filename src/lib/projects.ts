@@ -5,6 +5,7 @@
  *  which is exactly why export/import to a file exists alongside it.
  */
 
+import { imageHasAlpha } from './loadImage'
 import type { CanvasSize, SampleMethod } from './pixelate'
 
 const KEY = 'pindou.projects.v1'
@@ -33,11 +34,6 @@ export interface SavedProject {
 
 /* ---------- image <-> data URL ---------- */
 
-function hasAlpha(img: ImageData): boolean {
-  for (let i = 3; i < img.data.length; i += 4) if (img.data[i] < 255) return true
-  return false
-}
-
 export function imageDataToUrl(img: ImageData): string {
   const scale = Math.min(1, STORED_MAX / Math.max(img.width, img.height))
   const w = Math.max(1, Math.round(img.width * scale))
@@ -55,7 +51,7 @@ export function imageDataToUrl(img: ImageData): string {
   ctx.drawImage(src, 0, 0, w, h)
 
   // PNG only where transparency must survive; JPEG is far smaller otherwise.
-  return hasAlpha(img) ? out.toDataURL('image/png') : out.toDataURL('image/jpeg', 0.88)
+  return imageHasAlpha(img) ? out.toDataURL('image/png') : out.toDataURL('image/jpeg', 0.88)
 }
 
 /** Kept for callers that need pixels rather than a source to re-decode. */

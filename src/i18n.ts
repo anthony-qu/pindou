@@ -62,6 +62,7 @@ export const STRINGS = {
     done: 'Done',
     modified: 'modified',
     sharpOnly: 'Sharp only',
+    noAlpha: 'no transparency here',
 
     kernelLabel: 'Kernel shape',
     kernelHint: 'How source pixels inside a cell are weighted. Box treats a pixel at the cell edge the same as one at its centre; the others fall off with distance, and the last two reach into neighbouring cells and sharpen at the cost of ringing.',
@@ -146,6 +147,7 @@ export const STRINGS = {
     done: '完成',
     modified: '已修改',
     sharpOnly: '仅锐化',
+    noAlpha: '此图无透明区',
 
     kernelLabel: '核形状',
     kernelHint: '一格内的源像素如何加权。Box 把边缘像素和中心像素同等对待；其余按距离衰减，最后两种还会伸进相邻格，锐利但会有振铃。',

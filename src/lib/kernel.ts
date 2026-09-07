@@ -101,8 +101,21 @@ export function axisWeights(
     const w = new Float64Array(n)
     for (let i = 0; i < n; i++) {
       const px = start + i
-      let v = kernelWeight(kernel, (px + 0.5 - centre) / cell)
-      if (boundary === 'exact') v *= overlapFraction(px, lo, hi)
+      let v: number
+      if (boundary === 'exact') {
+        // Evaluate the kernel at the centroid of the part of the pixel the
+        // support actually covers, weighted by how much that is. Evaluating at
+        // the pixel centre instead would drop any pixel whose centre falls
+        // outside the support but which still overlaps it — so `exact` would
+        // down-weight pixels sticking out of the cell while discarding the ones
+        // sticking in. For box this reduces to plain area weighting.
+        const a0 = Math.max(px, lo)
+        const b0 = Math.min(px + 1, hi)
+        const cover = b0 - a0
+        v = cover <= 0 ? 0 : kernelWeight(kernel, ((a0 + b0) / 2 - centre) / cell) * cover
+      } else {
+        v = kernelWeight(kernel, (px + 0.5 - centre) / cell)
+      }
       w[i] = v
     }
     out.push({ start, w })

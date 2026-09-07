@@ -3,7 +3,7 @@ import ChartCanvas from './components/ChartCanvas'
 import BeadCounts from './components/BeadCounts'
 import Uploader from './components/Uploader'
 import AdvancedPanel from './components/AdvancedPanel'
-import { decodeToImageData } from './lib/loadImage'
+import { decodeToImageData, imageHasAlpha } from './lib/loadImage'
 import { loadAdvanced, saveAdvanced, isDefault } from './lib/settings'
 import {
   CANVAS_SIZES, DEFAULT_PIXELATE, fitGrid, pixelate, type CanvasSize, type SampleMethod,
@@ -87,6 +87,8 @@ export default function App() {
     const { width, height } = fitGrid(image.width, image.height, canvasSize)
     return pixelate(image, width, height, method, { ...DEFAULT_PIXELATE, ...advanced })
   }, [image, canvasSize, method, advanced])
+
+  const hasAlpha = useMemo(() => (image ? imageHasAlpha(image) : false), [image])
 
   // Stage B: cheap palette matching.
   const base = useMemo(() => (grid ? buildChart(grid) : null), [grid])
@@ -314,6 +316,7 @@ export default function App() {
                   onClose={() => setAdvOpen(false)}
                   t={t}
                   sharpActive={method === 'sharp'}
+                  imageHasAlpha={hasAlpha}
                 />
               )}
             </div>

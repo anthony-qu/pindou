@@ -11,6 +11,8 @@ interface Props {
   t: Strings
   /** Sharp-only settings are marked when the current method is Smooth. */
   sharpActive: boolean
+  /** The alpha threshold is inert on an image with no transparency at all. */
+  imageHasAlpha: boolean
 }
 
 function Row({
@@ -33,7 +35,9 @@ function Row({
   )
 }
 
-export default function AdvancedPanel({ value, onChange, onClose, t, sharpActive }: Props) {
+export default function AdvancedPanel({
+  value, onChange, onClose, t, sharpActive, imageHasAlpha,
+}: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const set = <K extends keyof Advanced>(k: K, v: Advanced[K]) => onChange({ ...value, [k]: v })
 
@@ -85,7 +89,11 @@ export default function AdvancedPanel({ value, onChange, onClose, t, sharpActive
           </div>
         </Row>
 
-        <Row label={t.alphaLabel} hint={t.alphaHint}>
+        <Row
+          label={t.alphaLabel}
+          hint={t.alphaHint}
+          tag={imageHasAlpha ? undefined : t.noAlpha}
+        >
           <input
             type="range" min={0.1} max={0.9} step={0.05} value={value.alphaThreshold}
             onChange={(e) => set('alphaThreshold', Number(e.target.value))}

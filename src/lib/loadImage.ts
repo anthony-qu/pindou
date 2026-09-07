@@ -12,6 +12,13 @@ export type Smoothing = 'off' | 'low' | 'medium' | 'high'
 export const DEFAULT_MAX_SOURCE = 1600
 export const DEFAULT_SMOOTHING: Smoothing = 'low'
 
+/** Whether any pixel is less than fully opaque. Cheap, and worth knowing: the
+ *  alpha threshold can do nothing at all on an image without transparency. */
+export function imageHasAlpha(img: ImageData): boolean {
+  for (let i = 3; i < img.data.length; i += 4) if (img.data[i] < 255) return true
+  return false
+}
+
 function toUrl(src: Blob | string): { url: string; revoke: boolean } {
   return typeof src === 'string'
     ? { url: src, revoke: false }

@@ -142,7 +142,8 @@ applies them:
    within a cell. Box is the original uniform weighting.
 2. **Boundary handling** — snap (whole pixels per cell) or exact (edge pixels weighted by
    the fraction the cell actually covers).
-3. **Alpha threshold** — coverage a cell needs to get a bead.
+3. **Alpha threshold** — coverage a cell needs to get a bead. Inert on an image with no
+   transparency, which the panel now says outright rather than leaving you to wonder.
 4. **Bin width** — Sharp's histogram bins, as bits per channel.
 5. **Bin merging** — pools each bin with its neighbours before the winner is picked.
 6. **Dominance threshold** — coverage the winner needs before Sharp trusts it.
@@ -163,9 +164,14 @@ and working size, saturation boost, and grid phase. They stay covered by
   many more source pixels. This matches the prediction: at a ~15:1 reduction the box filter
   is already the area average, which is near-ideal, so there is little for a better kernel
   to fix. It would matter more at low reduction ratios.
-- **Boundary handling only matters under box.** Snap vs exact changes 3.1% of cells with the
-  box kernel and **0.0%** with gaussian — a smooth kernel already tapers to near-zero at the
-  support edge, so weighting the edge pixels by coverage changes nothing.
+- **Boundary handling cannot produce a visible difference at this reduction ratio, and that
+  is structural.** Measured on a photo, snap vs exact moves a cell's colour by a mean of
+  **0.26 dE**, against a median nearest-neighbour distance of **3.87 dE** in the palette —
+  about 7% of one quantisation step, so ~15x too small to change which bead is chosen. The
+  3.5% of beads that do change are cells sitting almost exactly on the boundary between two
+  beads, where an imperceptible nudge tips them over. It also does nothing at all under a
+  smooth kernel (0.0% with gaussian), which already tapers to near-zero at the support edge.
+  Kept because it was asked for, but it fails the test that selected the other parameters.
 - **Bin merging can raise the colour count, not lower it.** On flat art it took 3 colours to
   7, because the winner's representative colour becomes the mean over the pooled group,
   which blends in the anti-aliased neighbours it merged. It helps photos (8.9% of cells
@@ -174,6 +180,10 @@ and working size, saturation boost, and grid phase. They stay covered by
   20.8% of cells at 4 bits and 48.8% at 3 bits, and at 3 bits it drops a photo from 125 to
   95 colours. Choosing the bin centre quantises output onto the bin grid, which is what
   makes the bin-width setting plainly visible.
+- **The alpha threshold's reach depends entirely on the source edge.** With no alpha channel
+  it is mathematically incapable of doing anything. On a hard 1px cutout it moves ~3% of
+  beads, one bead of silhouette. On a feathered edge it moves ~8%. It only ever acts on the
+  boundary ring, so it can never be a large effect.
 - **Linear averaging remains the only physically correct choice** (rgb 188 on half-black,
   half-white cells against 128 for sRGB and 119 for Lab), and remains unexposed by request.
 - **Sharp is phase-robust, Smooth is not:** on pixel art a half-cell shift changes 58% of
