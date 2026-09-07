@@ -22,6 +22,38 @@ export function rgbToHex(r: number, g: number, b: number): string {
   return `#${c(r)}${c(g)}${c(b)}`.toUpperCase()
 }
 
+/** sRGB byte -> linear light. A lookup table because the decode sits in the
+ *  innermost loop of the downsampler, once per channel per source pixel. */
+export const SRGB_TO_LINEAR = new Float32Array(256)
+for (let i = 0; i < 256; i++) {
+  const v = i / 255
+  SRGB_TO_LINEAR[i] = v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)
+}
+
+/** Linear light (0-1) -> sRGB (0-255). */
+export function linearToSrgb(v: number): number {
+  const c = v <= 0.0031308 ? v * 12.92 : 1.055 * Math.pow(v, 1 / 2.4) - 0.055
+  return c * 255
+}
+
+/** CIELAB -> sRGB (0-255), the inverse of rgbToLab. */
+export function labToRgb(L: number, a: number, b: number): Rgb {
+  const fy = (L + 16) / 116
+  const fx = fy + a / 500
+  const fz = fy - b / 200
+  const inv = (t: number) => (t > 6 / 29 ? t * t * t : 3 * (6 / 29) * (6 / 29) * (t - 4 / 29))
+
+  const X = 0.95047 * inv(fx)
+  const Y = inv(fy)
+  const Z = 1.08883 * inv(fz)
+
+  return {
+    r: linearToSrgb(3.2404542 * X - 1.5371385 * Y - 0.4985314 * Z),
+    g: linearToSrgb(-0.9692660 * X + 1.8760108 * Y + 0.0415560 * Z),
+    b: linearToSrgb(0.0556434 * X - 0.2040259 * Y + 1.0572252 * Z),
+  }
+}
+
 /** sRGB (0-255) -> CIELAB, D65 white point. */
 export function rgbToLab(r: number, g: number, b: number): Lab {
   const lin = (v: number) => {

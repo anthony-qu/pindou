@@ -54,6 +54,45 @@ export const STRINGS = {
     savedInBrowser: 'Saved in this browser only. Export to a file to keep a copy you control.',
     nameProject: 'Project name',
     untitled: 'Untitled',
+
+    advanced: 'Advanced',
+    advancedTitle: 'Advanced conversion',
+    advancedIntro: 'Seven settings that visibly change the chart. Defaults reproduce the standard conversion.',
+    resetDefaults: 'Reset to defaults',
+    done: 'Done',
+    modified: 'modified',
+    sharpOnly: 'Sharp only',
+
+    spaceLabel: 'Averaging color space',
+    spaceHint: 'sRGB averages encoded numbers rather than light, which makes detailed areas too dark. Linear is physically correct; Lab matches the space the palette is matched in.',
+    spaceSrgb: 'sRGB',
+    spaceLinear: 'Linear',
+    spaceLab: 'Lab',
+
+    binsLabel: 'Sharp bin width',
+    binsHint: 'How close two colors must be to count as the same when finding a cell\u2019s dominant color. Wider bins flatten more; narrower bins keep detail but turn to noise on photos.',
+    binsUnit: 'levels',
+
+    dominanceLabel: 'Dominance threshold',
+    dominanceHint: 'How much of a cell the dominant color must cover before Sharp trusts it. Below this the cell is averaged instead, so flat areas stay sharp while gradients stay smooth.',
+    dominanceOff: 'off (always dominant)',
+
+    sourceLabel: 'Source downscale',
+    sourceHint: 'The one resize the browser does, before any of your settings apply. Turn the filter off for pixel art; use High for photos.',
+    smoothingOff: 'Off',
+    smoothingLow: 'Low',
+    smoothingMedium: 'Med',
+    smoothingHigh: 'High',
+    maxSourceLabel: 'Working size',
+
+    phaseLabel: 'Grid phase',
+    phaseHint: 'Shifts the grid relative to the image. Irrelevant for photos; decisive for pixel art, where a misaligned grid smears every source pixel across two beads.',
+
+    alphaLabel: 'Bead coverage threshold',
+    alphaHint: 'How much of a cell must be opaque before it becomes a bead. Lower keeps thin features; higher gives a tighter silhouette.',
+
+    saturationLabel: 'Saturation boost',
+    saturationHint: 'Applied before reduction. Matching to a fixed palette tends to desaturate, so photos usually want a little more than 1.',
   },
   zh: {
     title: '拼豆',
@@ -101,5 +140,44 @@ export const STRINGS = {
     savedInBrowser: '只保存在这个浏览器里。导出成文件可以自己保管一份。',
     nameProject: '作品名称',
     untitled: '未命名',
+
+    advanced: '高级',
+    advancedTitle: '高级转换设置',
+    advancedIntro: '七个会明显改变图纸的设置。默认值等于标准转换。',
+    resetDefaults: '恢复默认',
+    done: '完成',
+    modified: '已修改',
+    sharpOnly: '仅锐化',
+
+    spaceLabel: '平均色计算空间',
+    spaceHint: 'sRGB 平均的是编码数值而不是光，会让细节区域偏暗。Linear 在物理上正确；Lab 与配色匹配所用的空间一致。',
+    spaceSrgb: 'sRGB',
+    spaceLinear: '线性',
+    spaceLab: 'Lab',
+
+    binsLabel: '锐化分箱宽度',
+    binsHint: '判断一格主色时，两个颜色要多接近才算同一种。分箱越宽越平整；越窄越保留细节，但照片会变成噪点。',
+    binsUnit: '级',
+
+    dominanceLabel: '主色占比阈值',
+    dominanceHint: '主色要占一格多大比例，锐化才采用它。低于该值就改用平均，于是平色区保持锐利、渐变区保持平滑。',
+    dominanceOff: '关（总用主色）',
+
+    sourceLabel: '源图缩小',
+    sourceHint: '这是浏览器自己做的一次缩放，发生在所有设置之前。像素图请关闭滤波；照片用「高」。',
+    smoothingOff: '关',
+    smoothingLow: '低',
+    smoothingMedium: '中',
+    smoothingHigh: '高',
+    maxSourceLabel: '工作尺寸',
+
+    phaseLabel: '网格相位',
+    phaseHint: '让网格相对图片平移。照片无所谓；像素图很关键，网格没对齐会把每个源像素抹到两颗豆子上。',
+
+    alphaLabel: '成豆覆盖阈值',
+    alphaHint: '一格要有多少不透明才放豆子。调低能保留细小结构，调高轮廓更紧凑。',
+
+    saturationLabel: '饱和度增强',
+    saturationHint: '在缩减之前应用。匹配固定色卡通常会降低饱和度，所以照片一般需要略大于 1。',
   },
 } as const

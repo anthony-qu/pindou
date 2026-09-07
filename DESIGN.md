@@ -133,7 +133,44 @@ storage budget. PNG where transparency must survive, JPEG otherwise.
 
 Clearing site data loses saves. That is exactly why the export button is not optional.
 
-## 9. Theme
+## 9. Advanced settings
+
+Seven conversion parameters behind an **Advanced** button, chosen because their effect
+survives stage ③ — anything whose effect is smaller than the 291-colour quantisation step is
+invisible by construction, which rules most candidates out.
+
+1. **Averaging colour space** — `srgb` / `linear` / `lab`
+2. **Sharp bin width** — bits per channel, 3–6
+3. **Dominance threshold** — coverage the winning bucket needs before Sharp trusts it
+4. **Source downscale** — the browser's filter and the working size
+5. **Grid phase** — origin offset in x and y, in cells
+6. **Bead coverage threshold** — the old `ALPHA_THRESHOLD`
+7. **Saturation boost** — applied before reduction
+
+Defaults reproduce the original conversion exactly, which a test asserts, so Reset always
+returns to a known baseline. Stored per browser rather than per project: these are tuning
+preferences, not content.
+
+`scripts/paramtest.ts` measures each one. Findings worth keeping:
+
+- **Linear averaging is the only physically correct option.** On cells that are half black
+  and half white it produces rgb 188, the right answer; sRGB gives 128 and Lab gives 119.
+  Lab averaging is *not* a middle ground — it returns the perceptual midpoint, which is the
+  wrong quantity for downsampling, where you are mixing light. Lab remains the right space
+  for measuring *distance*, which is a different operation and still used in stage B.
+- **The colour space only bites where a cell contains contrast.** On smooth gradients every
+  pixel in a cell is nearly identical, so all three spaces agree and the setting appears
+  inert. On hard-edged art it changes the chart.
+- **Sharp is phase-robust, Smooth is not.** On pixel art, a half-cell misalignment changes
+  58% of cells under Smooth and takes it from 2 colours to 6; Sharp is unaffected, because
+  the mode still picks the majority source pixel.
+- **Bin width is a secondary knob.** It changes ~11% of cells on a photo but barely moves the
+  colour count, and does nothing on clean flat art whose colours are far apart. The large
+  flat-art win measured earlier came from choosing Sharp at all, not from the bin width.
+- **Lab averaging costs about 20x** the other two (≈190ms vs ≈10ms on a 1600×1200 source),
+  because of the per-pixel cube roots.
+
+## 10. Theme
 
 Light and dark, toggled in the top bar and remembered, defaulting to the system setting.
 Dark mode darkens the page, the panels, and the surround behind the chart.
@@ -143,7 +180,7 @@ cross beads whose colours are arbitrary and a light line would vanish on the man
 beads. Empty holes stay a mid-grey checkerboard rather than going near-black, so those dark
 gridlines still read where they cross a hole.
 
-## 10. Measured cost
+## 11. Measured cost
 
 Worst case, 104×104 with every cell a distinct colour: stage A ~6ms, stage B ~20ms.
 Merge plan ~8ms, computed once per chart. A slider move re-runs only stage C: ~1ms of work,

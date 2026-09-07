@@ -58,6 +58,7 @@ export function imageDataToUrl(img: ImageData): string {
   return hasAlpha(img) ? out.toDataURL('image/png') : out.toDataURL('image/jpeg', 0.88)
 }
 
+/** Kept for callers that need pixels rather than a source to re-decode. */
 export function urlToImageData(url: string): Promise<ImageData> {
   return new Promise((resolve, reject) => {
     const el = new Image()

@@ -2,13 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ChartCanvas from './components/ChartCanvas'
 import BeadCounts from './components/BeadCounts'
 import Uploader from './components/Uploader'
-import { loadImageData } from './lib/loadImage'
+import AdvancedPanel from './components/AdvancedPanel'
+import { decodeToImageData } from './lib/loadImage'
+import { loadAdvanced, saveAdvanced, isDefault } from './lib/settings'
 import { CANVAS_SIZES, fitGrid, pixelate, type CanvasSize, type SampleMethod } from './lib/pixelate'
 import { buildChart } from './lib/chart'
 import { buildMergePlan, simplify } from './lib/simplify'
 import {
   deleteProject, exportProjectFile, imageDataToUrl, importProjectFile, listProjects,
-  newId, saveProject, StorageFullError, urlToImageData, type SavedProject,
+  newId, saveProject, StorageFullError, type SavedProject,
 } from './lib/projects'
 import { STRINGS, type Lang, type Strings } from './i18n'
 
@@ -35,6 +37,14 @@ export default function App() {
     localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light')
   }, [dark])
 
+  const [advanced, setAdvanced] = useState(() => loadAdvanced())
+  const [advOpen, setAdvOpen] = useState(false)
+  useEffect(() => { saveAdvanced(advanced) }, [advanced])
+
+  /** The undecimated source, kept so the decode can be redone when the
+   *  downscale policy changes. A Blob for a chosen file, a data URL for a
+   *  reopened project. */
+  const [source, setSource] = useState<Blob | string | null>(null)
   const [image, setImage] = useState<ImageData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [canvasSize, setCanvasSize] = useState<CanvasSize>(78)
@@ -56,13 +66,32 @@ export default function App() {
 
   /* ---------- pipeline ---------- */
 
+  // Stage 0: the browser's own resize. Redone when its policy changes, since
+  // whatever it discards is gone before the downsampler ever runs.
+  useEffect(() => {
+    if (!source) { setImage(null); return }
+    let live = true
+    decodeToImageData(source, advanced.maxSource, advanced.smoothing)
+      .then((img) => { if (live) { setImage(img); setError(null) } })
+      .catch(() => { if (live) { setImage(null); setError(STRINGS[lang].badImage) } })
+    return () => { live = false }
+  }, [source, advanced.maxSource, advanced.smoothing, lang])
+
   // Stage A: the expensive downsample. Recomputed only when the image, the
   // canvas size or the sampling method changes.
   const grid = useMemo(() => {
     if (!image) return null
     const { width, height } = fitGrid(image.width, image.height, canvasSize)
-    return pixelate(image, width, height, method)
-  }, [image, canvasSize, method])
+    return pixelate(image, width, height, method, {
+      space: advanced.space,
+      quantBits: advanced.quantBits,
+      dominance: advanced.dominance,
+      alphaThreshold: advanced.alphaThreshold,
+      saturation: advanced.saturation,
+      phaseX: advanced.phaseX,
+      phaseY: advanced.phaseY,
+    })
+  }, [image, canvasSize, method, advanced])
 
   // Stage B: cheap palette matching.
   const base = useMemo(() => (grid ? buildChart(grid) : null), [grid])
@@ -87,35 +116,25 @@ export default function App() {
 
   /* ---------- files and projects ---------- */
 
-  const openImage = useCallback(async (file: File) => {
+  const openImage = useCallback((file: File) => {
     setError(null)
-    try {
-      setImage(await loadImageData(file))
-      setProjectId(null)
-      setProjectName(file.name.replace(/\.[^.]+$/, '').slice(0, 40))
-      setTargetColours(null)
-      setHighlight(null)
-    } catch {
-      setImage(null)
-      setError(STRINGS[lang].badImage)
-    }
-  }, [lang])
+    setSource(file)
+    setProjectId(null)
+    setProjectName(file.name.replace(/\.[^.]+$/, '').slice(0, 40))
+    setTargetColours(null)
+    setHighlight(null)
+  }, [])
 
-  const applyProject = useCallback(async (p: SavedProject) => {
+  const applyProject = useCallback((p: SavedProject) => {
     setError(null)
-    try {
-      const img = await urlToImageData(p.image)
-      setImage(img)
-      setCanvasSize(p.settings.canvasSize)
-      setMethod(p.settings.method)
-      setProjectId(p.id)
-      setProjectName(p.name)
-      setHighlight(null)
-      setTargetColours(p.settings.mergeSteps > 0 ? p.settings.mergeSteps : null)
-    } catch {
-      setError(STRINGS[lang].badImage)
-    }
-  }, [lang])
+    setSource(p.image)
+    setCanvasSize(p.settings.canvasSize)
+    setMethod(p.settings.method)
+    setProjectId(p.id)
+    setProjectName(p.name)
+    setHighlight(null)
+    setTargetColours(p.settings.mergeSteps > 0 ? p.settings.mergeSteps : null)
+  }, [])
 
   const doSave = useCallback(() => {
     if (!image || !chart) return
@@ -162,7 +181,7 @@ export default function App() {
         </div>
         <div className="topbar-right">
           {image && (
-            <button className="ghost" onClick={() => { setImage(null); setError(null); setProjectId(null) }}>
+            <button className="ghost" onClick={() => { setSource(null); setError(null); setProjectId(null) }}>
               {t.reset}
             </button>
           )}
@@ -275,6 +294,16 @@ export default function App() {
                 />
               </div>
 
+              <div className="ctrl">
+                <label>&nbsp;</label>
+                <button
+                  className={`ghost adv-open${isDefault(advanced) ? '' : ' tweaked'}`}
+                  onClick={() => setAdvOpen(true)}
+                >
+                  {t.advanced}{isDefault(advanced) ? '' : ' •'}
+                </button>
+              </div>
+
               <dl className="stats">
                 <div><dt>{t.gridSize}</dt><dd>{chart.width}×{chart.height}</dd></div>
                 <div><dt>{t.totalBeads}</dt><dd>{chart.totalBeads.toLocaleString()}</dd></div>
@@ -321,6 +350,16 @@ export default function App() {
             />
             <p className="muted small">{t.savedInBrowser}</p>
           </aside>
+
+          {advOpen && (
+            <AdvancedPanel
+              value={advanced}
+              onChange={setAdvanced}
+              onClose={() => setAdvOpen(false)}
+              t={t}
+              sharpActive={method === 'sharp'}
+            />
+          )}
         </main>
       )}
     </div>

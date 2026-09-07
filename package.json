@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "test": "esbuild --bundle --platform=node --format=esm --loader:.json=json --log-level=error scripts/selftest.ts --outfile=.tmp/selftest.mjs && node .tmp/selftest.mjs && esbuild --bundle --platform=node --format=esm --loader:.json=json --log-level=error scripts/simplifytest.ts --outfile=.tmp/simplify.mjs && node .tmp/simplify.mjs",
+    "test": "esbuild --bundle --platform=node --format=esm --loader:.json=json --log-level=error scripts/selftest.ts --outfile=.tmp/selftest.mjs && node .tmp/selftest.mjs && esbuild --bundle --platform=node --format=esm --loader:.json=json --log-level=error scripts/simplifytest.ts --outfile=.tmp/simplifytest.mjs && node .tmp/simplifytest.mjs && esbuild --bundle --platform=node --format=esm --loader:.json=json --log-level=error scripts/paramtest.ts --outfile=.tmp/paramtest.mjs && node .tmp/paramtest.mjs",
     "bench": "esbuild scripts/bench.ts --bundle --platform=node --format=esm --loader:.json=json --outfile=.tmp/bench.mjs --log-level=error && node .tmp/bench.mjs"
   },
   "dependencies": {
