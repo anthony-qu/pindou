@@ -5,7 +5,9 @@ import Uploader from './components/Uploader'
 import AdvancedPanel from './components/AdvancedPanel'
 import { decodeToImageData } from './lib/loadImage'
 import { loadAdvanced, saveAdvanced, isDefault } from './lib/settings'
-import { CANVAS_SIZES, fitGrid, pixelate, type CanvasSize, type SampleMethod } from './lib/pixelate'
+import {
+  CANVAS_SIZES, DEFAULT_PIXELATE, fitGrid, pixelate, type CanvasSize, type SampleMethod,
+} from './lib/pixelate'
 import { buildChart } from './lib/chart'
 import { buildMergePlan, simplify } from './lib/simplify'
 import {
@@ -66,31 +68,24 @@ export default function App() {
 
   /* ---------- pipeline ---------- */
 
-  // Stage 0: the browser's own resize. Redone when its policy changes, since
-  // whatever it discards is gone before the downsampler ever runs.
+  // Stage 0: the browser's own resize, at its default policy. The source is
+  // kept rather than only its pixels, so this can be redone if the decode
+  // policy is ever exposed again.
   useEffect(() => {
     if (!source) { setImage(null); return }
     let live = true
-    decodeToImageData(source, advanced.maxSource, advanced.smoothing)
+    decodeToImageData(source)
       .then((img) => { if (live) { setImage(img); setError(null) } })
       .catch(() => { if (live) { setImage(null); setError(STRINGS[lang].badImage) } })
     return () => { live = false }
-  }, [source, advanced.maxSource, advanced.smoothing, lang])
+  }, [source, lang])
 
   // Stage A: the expensive downsample. Recomputed only when the image, the
   // canvas size or the sampling method changes.
   const grid = useMemo(() => {
     if (!image) return null
     const { width, height } = fitGrid(image.width, image.height, canvasSize)
-    return pixelate(image, width, height, method, {
-      space: advanced.space,
-      quantBits: advanced.quantBits,
-      dominance: advanced.dominance,
-      alphaThreshold: advanced.alphaThreshold,
-      saturation: advanced.saturation,
-      phaseX: advanced.phaseX,
-      phaseY: advanced.phaseY,
-    })
+    return pixelate(image, width, height, method, { ...DEFAULT_PIXELATE, ...advanced })
   }, [image, canvasSize, method, advanced])
 
   // Stage B: cheap palette matching.

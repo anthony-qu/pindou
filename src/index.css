@@ -365,6 +365,9 @@ input[type="range"]::-moz-range-thumb {
 .adv-hint { margin: 5px 0 9px; font-size: 12px; line-height: 1.4; color: var(--ink-soft); }
 
 .adv-control { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+/* Five kernels do not fit one row in a 370px panel. */
+.seg.wrap { flex-wrap: wrap; }
+.seg.wrap button { flex: 1 0 auto; }
 .adv-control > input[type="range"] { flex: 1; min-width: 140px; }
 
 .adv-value {

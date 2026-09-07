@@ -135,48 +135,61 @@ Clearing site data loses saves. That is exactly why the export button is not opt
 
 ## 9. Advanced settings
 
-Seven conversion parameters behind an **Advanced** button, chosen because their effect
-survives stage ③ — anything whose effect is smaller than the 291-colour quantisation step is
-invisible by construction, which rules most candidates out.
+Seven conversion parameters behind an **Advanced** button, listed in the order the pipeline
+applies them:
 
-1. **Averaging colour space** — `srgb` / `linear` / `lab`
-2. **Sharp bin width** — bits per channel, 3–6
-3. **Dominance threshold** — coverage the winning bucket needs before Sharp trusts it
-4. **Source downscale** — the browser's filter and the working size
-5. **Grid phase** — origin offset in x and y, in cells
-6. **Bead coverage threshold** — the old `ALPHA_THRESHOLD`
-7. **Saturation boost** — applied before reduction
+1. **Kernel shape** — box / tent / gaussian / mitchell / lanczos, weighting source pixels
+   within a cell. Box is the original uniform weighting.
+2. **Boundary handling** — snap (whole pixels per cell) or exact (edge pixels weighted by
+   the fraction the cell actually covers).
+3. **Alpha threshold** — coverage a cell needs to get a bead.
+4. **Bin width** — Sharp's histogram bins, as bits per channel.
+5. **Bin merging** — pools each bin with its neighbours before the winner is picked.
+6. **Dominance threshold** — coverage the winner needs before Sharp trusts it.
+7. **Bin refinement** — the winner's colour: the mean of its pixels, or the bin centre.
+
+`box` + `snap` is a dedicated branch, so the default output is bit-identical to the original
+integer tiling and is also the cheapest path. A test asserts it.
+
+Five further parameters exist in the library at their defaults but are not exposed, having
+been tried and found not worth a control: averaging colour space, source downscale filter
+and working size, saturation boost, and grid phase. They stay covered by
+`scripts/paramtest.ts`, so re-exposing one is a control, not a rewrite.
+
+`scripts/paramtest.ts` measures every parameter, exposed or not. Findings worth keeping:
+
+- **Kernel shape is a small effect here.** Any non-box kernel changes about 3.7% of cells on
+  a photo, and costs up to 22x the time (1ms to 22ms), because the wider support pulls in
+  many more source pixels. This matches the prediction: at a ~15:1 reduction the box filter
+  is already the area average, which is near-ideal, so there is little for a better kernel
+  to fix. It would matter more at low reduction ratios.
+- **Boundary handling only matters under box.** Snap vs exact changes 3.1% of cells with the
+  box kernel and **0.0%** with gaussian — a smooth kernel already tapers to near-zero at the
+  support edge, so weighting the edge pixels by coverage changes nothing.
+- **Bin merging can raise the colour count, not lower it.** On flat art it took 3 colours to
+  7, because the winner's representative colour becomes the mean over the pooled group,
+  which blends in the anti-aliased neighbours it merged. It helps photos (8.9% of cells
+  change) and hurts flat art. It is a bin-splitting fix, not a cleanup knob.
+- **Bin refinement is the strongest of the new controls.** Bin centre versus mean changes
+  20.8% of cells at 4 bits and 48.8% at 3 bits, and at 3 bits it drops a photo from 125 to
+  95 colours. Choosing the bin centre quantises output onto the bin grid, which is what
+  makes the bin-width setting plainly visible.
+- **Linear averaging remains the only physically correct choice** (rgb 188 on half-black,
+  half-white cells against 128 for sRGB and 119 for Lab), and remains unexposed by request.
+- **Sharp is phase-robust, Smooth is not:** on pixel art a half-cell shift changes 58% of
+  cells under Smooth and none under Sharp.
 
 The panel is **non-modal and docked over the left of the chart**, not a centred dialog behind
 a scrim. The entire point of these controls is watching the chart change as you drag them, so
 the chart stays visible and pannable, and clicking outside does not dismiss the panel. It is
 anchored to the canvas rather than the viewport so it never covers the canvas-size or
-Smooth/Sharp buttons — two of the settings apply only to Sharp, so you need to switch method
+Smooth/Sharp buttons — four of the settings apply only to Sharp, so you need to switch method
 while the panel is open. On a phone it becomes a bottom sheet at 62vh, leaving the top of the
 chart visible.
 
-Defaults reproduce the original conversion exactly, which a test asserts, so Reset always
+Defaults reproduce the standard conversion exactly, which a test asserts, so Reset always
 returns to a known baseline. Stored per browser rather than per project: these are tuning
 preferences, not content.
-
-`scripts/paramtest.ts` measures each one. Findings worth keeping:
-
-- **Linear averaging is the only physically correct option.** On cells that are half black
-  and half white it produces rgb 188, the right answer; sRGB gives 128 and Lab gives 119.
-  Lab averaging is *not* a middle ground — it returns the perceptual midpoint, which is the
-  wrong quantity for downsampling, where you are mixing light. Lab remains the right space
-  for measuring *distance*, which is a different operation and still used in stage B.
-- **The colour space only bites where a cell contains contrast.** On smooth gradients every
-  pixel in a cell is nearly identical, so all three spaces agree and the setting appears
-  inert. On hard-edged art it changes the chart.
-- **Sharp is phase-robust, Smooth is not.** On pixel art, a half-cell misalignment changes
-  58% of cells under Smooth and takes it from 2 colours to 6; Sharp is unaffected, because
-  the mode still picks the majority source pixel.
-- **Bin width is a secondary knob.** It changes ~11% of cells on a photo but barely moves the
-  colour count, and does nothing on clean flat art whose colours are far apart. The large
-  flat-art win measured earlier came from choosing Sharp at all, not from the bin width.
-- **Lab averaging costs about 20x** the other two (≈190ms vs ≈10ms on a 1600×1200 source),
-  because of the per-pixel cube roots.
 
 ## 10. Theme
 

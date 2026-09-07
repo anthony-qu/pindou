@@ -6,6 +6,11 @@
  */
 
 import { SRGB_TO_LINEAR, labToRgb, linearToSrgb, rgbToLab } from './color'
+import { axisWeights, type Boundary, type Kernel } from './kernel'
+export type { Boundary, Kernel } from './kernel'
+
+/** How the representative colour of the winning bucket is chosen. */
+export type Refine = 'mean' | 'centre'
 
 export type SampleMethod = 'average' | 'sharp'
 
@@ -19,6 +24,16 @@ export type SampleMethod = 'average' | 'sharp'
 export type ColorSpace = 'srgb' | 'linear' | 'lab'
 
 export interface PixelateOptions {
+  /** Weighting of source pixels within a cell. */
+  kernel: Kernel
+  /** Whether partially covered edge pixels are weighted by their coverage. */
+  boundary: Boundary
+  /** Bins within this Chebyshev radius are pooled before picking the winner,
+   *  so two near-identical colours that straddle a bin edge are not split.
+   *  0 disables pooling. */
+  binMerge: number
+  /** Representative colour of the winning bucket: its mean, or the bin centre. */
+  refine: Refine
   space: ColorSpace
   /** Bits per channel when bucketing colours for `sharp`. Bin width = 2^(8-bits). */
   quantBits: number
@@ -37,6 +52,10 @@ export interface PixelateOptions {
 
 /** Reproduces the behaviour the app shipped with. */
 export const DEFAULT_PIXELATE: PixelateOptions = {
+  kernel: 'box',
+  boundary: 'snap',
+  binMerge: 0,
+  refine: 'mean',
   space: 'srgb',
   quantBits: 4,
   dominance: 0,
@@ -81,41 +100,57 @@ export function pixelate(
   const opaque = new Uint8Array(gridW * gridH)
   const { data, width: sw, height: sh } = img
 
-  const { space, dominance, alphaThreshold, saturation, phaseX, phaseY } = opts
+  const { space, dominance, alphaThreshold, saturation, kernel, boundary, refine } = opts
   const bits = Math.max(1, Math.min(8, Math.round(opts.quantBits)))
   const shift = 8 - bits
+  const binW = 1 << shift
+  const mask = (1 << bits) - 1
+  const mergeR = Math.max(0, Math.round(opts.binMerge))
   const sat = saturation
   // 0/1/2 rather than the string: this is tested once per source pixel.
   const spaceId = space === 'linear' ? 1 : space === 'lab' ? 2 : 0
   const sharp = method === 'sharp'
 
-  const offX = phaseX * (sw / gridW)
-  const offY = phaseY * (sh / gridH)
+  // Weights depend only on the column (or row), so they are computed once per
+  // axis rather than once per cell. Phase shifts the sampling grid.
+  const phaseOffX = Math.round(opts.phaseX * (sw / gridW))
+  const phaseOffY = Math.round(opts.phaseY * (sh / gridH))
+  const wx = axisWeights(gridW, sw, kernel, boundary)
+  const wy = axisWeights(gridH, sh, kernel, boundary)
 
-  const buckets = new Map<number, { n: number; c0: number; c1: number; c2: number }>()
+  interface Bucket { key: number; n: number; c0: number; c1: number; c2: number }
+  const buckets = new Map<number, Bucket>()
+  const list: Bucket[] = []
 
   for (let cy = 0; cy < gridH; cy++) {
-    const y0 = Math.min(sh, Math.max(0, Math.floor((cy * sh) / gridH + offY)))
-    const y1 = Math.min(sh, Math.max(y0 + 1, Math.floor(((cy + 1) * sh) / gridH + offY)))
-
+    const ry = wy[cy]
     for (let cx = 0; cx < gridW; cx++) {
-      const x0 = Math.min(sw, Math.max(0, Math.floor((cx * sw) / gridW + offX)))
-      const x1 = Math.min(sw, Math.max(x0 + 1, Math.floor(((cx + 1) * sw) / gridW + offX)))
+      const rx = wx[cx]
 
-      let sumA = 0
-      let n = 0
+      let sumW = 0        // positive weight, for the coverage test
+      let sumWA = 0       // weight x alpha, the mean's denominator
       let m0 = 0, m1 = 0, m2 = 0
-      let nOpaque = 0
-      if (sharp) buckets.clear()
+      let opaqueW = 0
+      if (sharp) { buckets.clear(); list.length = 0 }
 
-      for (let y = y0; y < y1; y++) {
-        for (let x = x0; x < x1; x++) {
-          const i = (y * sw + x) * 4
+      for (let iy = 0; iy < ry.w.length; iy++) {
+        const py = ry.start + iy + phaseOffY
+        if (py < 0 || py >= sh) continue
+        const wyv = ry.w[iy]
+        if (wyv === 0) continue
+
+        for (let ix = 0; ix < rx.w.length; ix++) {
+          const px = rx.start + ix + phaseOffX
+          if (px < 0 || px >= sw) continue
+          const w = wyv * rx.w[ix]
+          if (w === 0) continue
+
+          const i = (py * sw + px) * 4
           const a = data[i + 3] / 255
-          n++
-          sumA += a
+          if (w > 0) sumW += w
+          sumWA += w * a
           if (a === 0) continue
-          nOpaque++
+          if (w > 0) opaqueW += w
 
           let R = data[i], G = data[i + 1], B = data[i + 2]
           if (sat !== 1) {
@@ -138,44 +173,87 @@ export function pixelate(
 
           // The mean is always accumulated: `sharp` needs it for the
           // no-dominant-colour fallback.
-          m0 += v0 * a; m1 += v1 * a; m2 += v2 * a
+          const wa = w * a
+          m0 += v0 * wa; m1 += v1 * wa; m2 += v2 * wa
 
-          if (sharp) {
-            const key =
-              (((R | 0) >> shift) << (bits * 2)) |
-              (((G | 0) >> shift) << bits) |
-              ((B | 0) >> shift)
+          if (sharp && w > 0) {
+            const key = (((R | 0) >> shift) << (bits * 2)) | (((G | 0) >> shift) << bits) | ((B | 0) >> shift)
             const acc = buckets.get(key)
-            if (acc) { acc.n++; acc.c0 += v0; acc.c1 += v1; acc.c2 += v2 }
-            else buckets.set(key, { n: 1, c0: v0, c1: v1, c2: v2 })
+            if (acc) { acc.n += w; acc.c0 += v0 * w; acc.c1 += v1 * w; acc.c2 += v2 * w }
+            else {
+              const b = { key, n: w, c0: v0 * w, c1: v1 * w, c2: v2 * w }
+              buckets.set(key, b); list.push(b)
+            }
           }
         }
       }
 
       const cell = cy * gridW + cx
-      if (n === 0 || sumA / n < alphaThreshold) {
+      if (sumW === 0 || sumWA / sumW < alphaThreshold) {
         opaque[cell] = 0
         continue
       }
       opaque[cell] = 1
 
-      // Pick the representative value, still in the working space.
       let o0: number, o1: number, o2: number
       let useMean = true
-      if (sharp && nOpaque > 0) {
-        let best: { n: number; c0: number; c1: number; c2: number } | undefined
-        for (const acc of buckets.values()) if (!best || acc.n > best.n) best = acc
-        if (best && best.n / nOpaque >= dominance) {
+
+      if (sharp && list.length > 0 && opaqueW > 0) {
+        let best: Bucket | undefined
+        let bestScore = -Infinity
+        let g0 = 0, g1 = 0, g2 = 0, gn = 0
+
+        if (mergeR === 0) {
+          for (const b of list) if (b.n > bestScore) { bestScore = b.n; best = b }
+          if (best) { g0 = best.c0; g1 = best.c1; g2 = best.c2; gn = best.n }
+        } else {
+          // Pool each bin with its neighbours before choosing, so two nearly
+          // identical colours split across a bin edge are not both beaten by a
+          // third. Cells hold only a handful of bins, so the pairwise scan is cheap.
+          for (const b of list) {
+            const br = b.key >> (bits * 2), bg = (b.key >> bits) & mask, bb = b.key & mask
+            let score = 0
+            for (const o of list) {
+              const or = o.key >> (bits * 2), og = (o.key >> bits) & mask, ob = o.key & mask
+              if (Math.abs(or - br) <= mergeR && Math.abs(og - bg) <= mergeR && Math.abs(ob - bb) <= mergeR) {
+                score += o.n
+              }
+            }
+            if (score > bestScore) { bestScore = score; best = b }
+          }
+          if (best) {
+            const br = best.key >> (bits * 2), bg = (best.key >> bits) & mask, bb = best.key & mask
+            for (const o of list) {
+              const or = o.key >> (bits * 2), og = (o.key >> bits) & mask, ob = o.key & mask
+              if (Math.abs(or - br) <= mergeR && Math.abs(og - bg) <= mergeR && Math.abs(ob - bb) <= mergeR) {
+                g0 += o.c0; g1 += o.c1; g2 += o.c2; gn += o.n
+              }
+            }
+          }
+        }
+
+        if (best && bestScore / opaqueW >= dominance) {
           useMean = false
-          o0 = best.c0 / best.n; o1 = best.c1 / best.n; o2 = best.c2 / best.n
+          if (refine === 'centre') {
+            // The winning bin's centre, so the output is quantised to the bin
+            // grid: this is what makes the bin width itself visible.
+            const cr = (best.key >> (bits * 2)) * binW + binW / 2
+            const cg = ((best.key >> bits) & mask) * binW + binW / 2
+            const cb = (best.key & mask) * binW + binW / 2
+            if (spaceId === 1) { o0 = SRGB_TO_LINEAR[cr | 0]; o1 = SRGB_TO_LINEAR[cg | 0]; o2 = SRGB_TO_LINEAR[cb | 0] }
+            else if (spaceId === 2) { const l = rgbToLab(cr, cg, cb); o0 = l.L; o1 = l.a; o2 = l.b }
+            else { o0 = cr; o1 = cg; o2 = cb }
+          } else {
+            o0 = g0 / gn; o1 = g1 / gn; o2 = g2 / gn
+          }
         }
       }
+
       if (useMean) {
-        const w = sumA || 1
-        o0 = m0 / w; o1 = m1 / w; o2 = m2 / w
+        const d = sumWA || 1
+        o0 = m0 / d; o1 = m1 / d; o2 = m2 / d
       }
 
-      // Back to sRGB bytes.
       let r: number, g: number, b: number
       if (spaceId === 1) {
         r = linearToSrgb(o0!); g = linearToSrgb(o1!); b = linearToSrgb(o2!)

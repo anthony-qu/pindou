@@ -1,4 +1,5 @@
 import { pixelate, fitGrid, DEFAULT_PIXELATE, type PixelateOptions, type SampleMethod } from '../src/lib/pixelate'
+import type { Kernel } from '../src/lib/kernel'
 import { buildChart, EMPTY } from '../src/lib/chart'
 import { PALETTE } from '../src/lib/palette'
 import { rgbToLab } from '../src/lib/color'
@@ -206,6 +207,59 @@ for (const space of ['srgb', 'linear', 'lab'] as const) {
   const best = Math.min(...[0, 1, 2].map(() => run(big, 104, 'average', { space }).ms))
   console.log(`  ${space.padEnd(7)} ${best}ms`)
 }
+
+/* ---------- newly exposed: kernel shape ---------- */
+console.log('\n=== kernel shape (photo, Smooth) ===')
+const kBox = run(photo, 104, 'average', { kernel: 'box' })
+for (const k of ['box', 'tent', 'gaussian', 'mitchell', 'lanczos'] as Kernel[]) {
+  const r = run(photo, 104, 'average', { kernel: k })
+  console.log(`  ${k.padEnd(9)} ${String(r.colours).padStart(3)} colours, ${diff(kBox.chart.cells, r.chart.cells).toFixed(1).padStart(5)}% differ from box, ${r.ms}ms`)
+}
+const kLan = run(photo, 104, 'average', { kernel: 'lanczos' })
+check('kernel shape changes the result', diff(kBox.chart.cells, kLan.chart.cells) > 2,
+  `box vs lanczos: ${diff(kBox.chart.cells, kLan.chart.cells).toFixed(1)}% of cells differ`)
+
+console.log('\n=== kernel shape on flat art (Sharp) ===')
+for (const k of ['box', 'tent', 'lanczos'] as Kernel[]) {
+  const r = run(art, 104, 'sharp', { kernel: k })
+  console.log(`  ${k.padEnd(9)} ${r.colours} colours`)
+}
+
+/* ---------- newly exposed: boundary handling ---------- */
+console.log('\n=== boundary handling ===')
+for (const k of ['box', 'gaussian'] as Kernel[]) {
+  const snap = run(photo, 104, 'average', { kernel: k, boundary: 'snap' })
+  const exact = run(photo, 104, 'average', { kernel: k, boundary: 'exact' })
+  console.log(`  ${k.padEnd(9)} snap ${snap.colours} colours vs exact ${exact.colours}, ${diff(snap.chart.cells, exact.chart.cells).toFixed(1)}% of cells differ`)
+}
+const bSnap = run(photo, 104, 'average', { boundary: 'snap' })
+const bExact = run(photo, 104, 'average', { boundary: 'exact' })
+check('boundary handling changes the result', diff(bSnap.chart.cells, bExact.chart.cells) > 0.5,
+  `${diff(bSnap.chart.cells, bExact.chart.cells).toFixed(1)}% of cells differ`)
+
+/* ---------- newly exposed: bin merging ---------- */
+console.log('\n=== bin merging before argmax (Sharp) ===')
+const mRef = run(photo, 104, 'sharp', { binMerge: 0 })
+for (const m of [0, 1, 2, 3]) {
+  const r = run(photo, 104, 'sharp', { binMerge: m })
+  const f = run(art, 104, 'sharp', { binMerge: m })
+  console.log(`  +-${m} bins: photo ${String(r.colours).padStart(3)} colours (${diff(mRef.chart.cells, r.chart.cells).toFixed(1)}% differ), flat art ${f.colours} colours, ${r.ms}ms`)
+}
+const m3 = run(photo, 104, 'sharp', { binMerge: 3 })
+check('bin merging changes the result', diff(mRef.chart.cells, m3.chart.cells) > 1,
+  `${diff(mRef.chart.cells, m3.chart.cells).toFixed(1)}% of cells differ`)
+
+/* ---------- newly exposed: refinement within the winning bin ---------- */
+console.log('\n=== bin refinement (Sharp) ===')
+for (const bits of [3, 4, 6]) {
+  const mean = run(photo, 104, 'sharp', { quantBits: bits, refine: 'mean' })
+  const centre = run(photo, 104, 'sharp', { quantBits: bits, refine: 'centre' })
+  console.log(`  ${bits} bits: mean ${String(mean.colours).padStart(3)} colours vs centre ${String(centre.colours).padStart(3)}, ${diff(mean.chart.cells, centre.chart.cells).toFixed(1)}% differ`)
+}
+const rMean = run(photo, 104, 'sharp', { refine: 'mean' })
+const rCentre = run(photo, 104, 'sharp', { refine: 'centre' })
+check('refinement changes the result', diff(rMean.chart.cells, rCentre.chart.cells) > 5,
+  `${diff(rMean.chart.cells, rCentre.chart.cells).toFixed(1)}% of cells differ`)
 
 console.log(fails === 0 ? '\nALL PASS' : `\n${fails} FAILURES`)
 process.exit(fails ? 1 : 0)

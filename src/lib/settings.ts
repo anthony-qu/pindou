@@ -1,45 +1,47 @@
-/** Advanced conversion settings: the seven knobs that visibly change output.
+/** Advanced conversion settings, ordered as the pipeline applies them.
  *
  *  Stored per browser rather than per project — they are tuning preferences,
- *  not content. The defaults reproduce the app's original behaviour exactly,
+ *  not content. The defaults reproduce the app's standard conversion exactly,
  *  so "Reset" always returns to a known-good baseline.
+ *
+ *  Five further parameters exist in the library at their defaults but are not
+ *  exposed: averaging colour space, source downscale filter and working size,
+ *  saturation boost, and grid phase. They stay covered by scripts/paramtest.ts,
+ *  so re-exposing any of them is a control, not a rewrite.
  */
 
-import { DEFAULT_MAX_SOURCE, DEFAULT_SMOOTHING, type Smoothing } from './loadImage'
-import { DEFAULT_PIXELATE, type ColorSpace } from './pixelate'
+import { DEFAULT_PIXELATE, type Refine } from './pixelate'
+import type { Boundary, Kernel } from './kernel'
 
 export interface Advanced {
-  /** 1. Space the cell average is computed in. */
-  space: ColorSpace
-  /** 2. Sharp's histogram bin width, as bits per channel. */
-  quantBits: number
-  /** 3. Coverage the dominant bucket needs before Sharp trusts it. */
-  dominance: number
-  /** 4. Source downscale policy. */
-  smoothing: Smoothing
-  maxSource: number
-  /** 5. Grid origin offset, in cells. */
-  phaseX: number
-  phaseY: number
-  /** 6. Coverage a cell needs to get a bead. */
+  /** 1. How source pixels inside a cell are weighted. */
+  kernel: Kernel
+  /** 2. Whether partially covered edge pixels are weighted by their coverage. */
+  boundary: Boundary
+  /** 3. Coverage a cell needs before it gets a bead. */
   alphaThreshold: number
-  /** 7. Saturation applied before reduction. */
-  saturation: number
+  /** 4. Histogram bin width, as bits per channel. Sharp only. */
+  quantBits: number
+  /** 5. Radius, in bins, over which bins are pooled before the winner is
+   *     chosen. Sharp only. */
+  binMerge: number
+  /** 6. Coverage the winner needs before Sharp trusts it. Sharp only. */
+  dominance: number
+  /** 7. Representative colour of the winning bin. Sharp only. */
+  refine: Refine
 }
 
 export const DEFAULT_ADVANCED: Advanced = {
-  space: DEFAULT_PIXELATE.space,
-  quantBits: DEFAULT_PIXELATE.quantBits,
-  dominance: DEFAULT_PIXELATE.dominance,
-  smoothing: DEFAULT_SMOOTHING,
-  maxSource: DEFAULT_MAX_SOURCE,
-  phaseX: DEFAULT_PIXELATE.phaseX,
-  phaseY: DEFAULT_PIXELATE.phaseY,
+  kernel: DEFAULT_PIXELATE.kernel,
+  boundary: DEFAULT_PIXELATE.boundary,
   alphaThreshold: DEFAULT_PIXELATE.alphaThreshold,
-  saturation: DEFAULT_PIXELATE.saturation,
+  quantBits: DEFAULT_PIXELATE.quantBits,
+  binMerge: DEFAULT_PIXELATE.binMerge,
+  dominance: DEFAULT_PIXELATE.dominance,
+  refine: DEFAULT_PIXELATE.refine,
 }
 
-const KEY = 'pindou.advanced.v1'
+const KEY = 'pindou.advanced.v2'
 
 export function loadAdvanced(): Advanced {
   try {

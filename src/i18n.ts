@@ -63,36 +63,34 @@ export const STRINGS = {
     modified: 'modified',
     sharpOnly: 'Sharp only',
 
-    spaceLabel: 'Averaging color space',
-    spaceHint: 'sRGB averages encoded numbers rather than light, which makes detailed areas too dark. Linear is physically correct; Lab matches the space the palette is matched in.',
-    spaceSrgb: 'sRGB',
-    spaceLinear: 'Linear',
-    spaceLab: 'Lab',
+    kernelLabel: 'Kernel shape',
+    kernelHint: 'How source pixels inside a cell are weighted. Box treats a pixel at the cell edge the same as one at its centre; the others fall off with distance, and the last two reach into neighbouring cells and sharpen at the cost of ringing.',
+    kernelBox: 'Box', kernelTent: 'Tent', kernelGaussian: 'Gauss',
+    kernelMitchell: 'Mitchell', kernelLanczos: 'Lanczos',
 
-    binsLabel: 'Sharp bin width',
+    boundaryLabel: 'Boundary handling',
+    boundaryHint: 'A cell is rarely a whole number of pixels wide. Snap gives each cell whole pixels, so the odd fraction lands on one side. Exact weights the edge pixels by how much of them the cell really covers.',
+    boundarySnap: 'Snap', boundaryExact: 'Exact',
+
+    alphaLabel: 'Alpha threshold',
+    alphaHint: 'How much of a cell must be opaque before it becomes a bead. Lower keeps thin features; higher gives a tighter silhouette.',
+
+    binsLabel: 'Bin width',
     binsHint: 'How close two colors must be to count as the same when finding a cell\u2019s dominant color. Wider bins flatten more; narrower bins keep detail but turn to noise on photos.',
     binsUnit: 'levels',
+
+    mergeLabel: 'Bin merging',
+    mergeHint: 'Pools each bin with its neighbours before picking the winner, so two near-identical colors split across a bin edge are not both beaten by a third.',
+    mergeOff: 'off',
+    mergeUnit: 'bins',
 
     dominanceLabel: 'Dominance threshold',
     dominanceHint: 'How much of a cell the dominant color must cover before Sharp trusts it. Below this the cell is averaged instead, so flat areas stay sharp while gradients stay smooth.',
     dominanceOff: 'off (always dominant)',
 
-    sourceLabel: 'Source downscale',
-    sourceHint: 'The one resize the browser does, before any of your settings apply. Turn the filter off for pixel art; use High for photos.',
-    smoothingOff: 'Off',
-    smoothingLow: 'Low',
-    smoothingMedium: 'Med',
-    smoothingHigh: 'High',
-    maxSourceLabel: 'Working size',
-
-    phaseLabel: 'Grid phase',
-    phaseHint: 'Shifts the grid relative to the image. Irrelevant for photos; decisive for pixel art, where a misaligned grid smears every source pixel across two beads.',
-
-    alphaLabel: 'Bead coverage threshold',
-    alphaHint: 'How much of a cell must be opaque before it becomes a bead. Lower keeps thin features; higher gives a tighter silhouette.',
-
-    saturationLabel: 'Saturation boost',
-    saturationHint: 'Applied before reduction. Matching to a fixed palette tends to desaturate, so photos usually want a little more than 1.',
+    refineLabel: 'Bin refinement',
+    refineHint: 'The winning bin\u2019s color: the mean of the pixels in it, which is accurate, or the bin centre, which quantises output to the bin grid and makes the bin width plainly visible.',
+    refineMean: 'Mean', refineCentre: 'Bin centre',
   },
   zh: {
     title: '拼豆',
@@ -149,35 +147,33 @@ export const STRINGS = {
     modified: '已修改',
     sharpOnly: '仅锐化',
 
-    spaceLabel: '平均色计算空间',
-    spaceHint: 'sRGB 平均的是编码数值而不是光，会让细节区域偏暗。Linear 在物理上正确；Lab 与配色匹配所用的空间一致。',
-    spaceSrgb: 'sRGB',
-    spaceLinear: '线性',
-    spaceLab: 'Lab',
+    kernelLabel: '核形状',
+    kernelHint: '一格内的源像素如何加权。Box 把边缘像素和中心像素同等对待；其余按距离衰减，最后两种还会伸进相邻格，锐利但会有振铃。',
+    kernelBox: 'Box', kernelTent: '三角', kernelGaussian: '高斯',
+    kernelMitchell: 'Mitchell', kernelLanczos: 'Lanczos',
 
-    binsLabel: '锐化分箱宽度',
+    boundaryLabel: '边界处理',
+    boundaryHint: '一格的宽度很少是整数个像素。Snap 让每格取整像素，多出的零头整个落到一边；Exact 按实际覆盖比例给边缘像素加权。',
+    boundarySnap: '取整', boundaryExact: '精确',
+
+    alphaLabel: 'Alpha 阈值',
+    alphaHint: '一格要有多少不透明才放豆子。调低能保留细小结构，调高轮廓更紧凑。',
+
+    binsLabel: '分箱宽度',
     binsHint: '判断一格主色时，两个颜色要多接近才算同一种。分箱越宽越平整；越窄越保留细节，但照片会变成噪点。',
     binsUnit: '级',
+
+    mergeLabel: '分箱合并',
+    mergeHint: '选主色之前先把每个箱和邻箱合并，避免两个几乎相同、却被箱边界分开的颜色一起输给第三个。',
+    mergeOff: '关',
+    mergeUnit: '箱',
 
     dominanceLabel: '主色占比阈值',
     dominanceHint: '主色要占一格多大比例，锐化才采用它。低于该值就改用平均，于是平色区保持锐利、渐变区保持平滑。',
     dominanceOff: '关（总用主色）',
 
-    sourceLabel: '源图缩小',
-    sourceHint: '这是浏览器自己做的一次缩放，发生在所有设置之前。像素图请关闭滤波；照片用「高」。',
-    smoothingOff: '关',
-    smoothingLow: '低',
-    smoothingMedium: '中',
-    smoothingHigh: '高',
-    maxSourceLabel: '工作尺寸',
-
-    phaseLabel: '网格相位',
-    phaseHint: '让网格相对图片平移。照片无所谓；像素图很关键，网格没对齐会把每个源像素抹到两颗豆子上。',
-
-    alphaLabel: '成豆覆盖阈值',
-    alphaHint: '一格要有多少不透明才放豆子。调低能保留细小结构，调高轮廓更紧凑。',
-
-    saturationLabel: '饱和度增强',
-    saturationHint: '在缩减之前应用。匹配固定色卡通常会降低饱和度，所以照片一般需要略大于 1。',
+    refineLabel: '箱内取值',
+    refineHint: '获胜箱的颜色取值：箱内像素的平均值更准确；取箱中心则把输出量化到分箱网格上，能直观看出分箱宽度。',
+    refineMean: '平均', refineCentre: '箱中心',
   },
 } as const

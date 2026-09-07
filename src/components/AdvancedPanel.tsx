@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react'
 import type { Strings } from '../i18n'
 import { DEFAULT_ADVANCED, isDefault, type Advanced } from '../lib/settings'
-import type { ColorSpace } from '../lib/pixelate'
-import type { Smoothing } from '../lib/loadImage'
+import type { Refine } from '../lib/pixelate'
+import type { Boundary, Kernel } from '../lib/kernel'
 
 interface Props {
   value: Advanced
@@ -44,20 +44,16 @@ export default function AdvancedPanel({ value, onChange, onClose, t, sharpActive
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  const spaces: [ColorSpace, string][] = [
-    ['srgb', t.spaceSrgb], ['linear', t.spaceLinear], ['lab', t.spaceLab],
+  const kernels: [Kernel, string][] = [
+    ['box', t.kernelBox], ['tent', t.kernelTent], ['gaussian', t.kernelGaussian],
+    ['mitchell', t.kernelMitchell], ['lanczos', t.kernelLanczos],
   ]
-  const smoothings: [Smoothing, string][] = [
-    ['off', t.smoothingOff], ['low', t.smoothingLow],
-    ['medium', t.smoothingMedium], ['high', t.smoothingHigh],
-  ]
+  const boundaries: [Boundary, string][] = [['snap', t.boundarySnap], ['exact', t.boundaryExact]]
+  const refines: [Refine, string][] = [['mean', t.refineMean], ['centre', t.refineCentre]]
   const sharpTag = sharpActive ? undefined : t.sharpOnly
 
   return (
-    <div
-      className="adv-panel" role="dialog" aria-label={t.advancedTitle}
-      tabIndex={-1} ref={ref}
-    >
+    <div className="adv-panel" role="dialog" aria-label={t.advancedTitle} tabIndex={-1} ref={ref}>
       <header className="adv-top">
         <div>
           <h2>{t.advancedTitle}</h2>
@@ -66,30 +62,55 @@ export default function AdvancedPanel({ value, onChange, onClose, t, sharpActive
         <button className="ghost" onClick={onClose}>{t.done}</button>
       </header>
 
+      {/* Ordered as the pipeline applies them: gather, then the hole decision,
+          then the binning that only Sharp uses. */}
       <div className="adv-body">
-        {/* 1 */}
-        <Row label={t.spaceLabel} hint={t.spaceHint}>
-          <div className="seg">
-            {spaces.map(([id, name]) => (
-              <button key={id} className={value.space === id ? 'on' : ''} onClick={() => set('space', id)}>
+        <Row label={t.kernelLabel} hint={t.kernelHint}>
+          <div className="seg wrap">
+            {kernels.map(([id, name]) => (
+              <button key={id} className={value.kernel === id ? 'on' : ''} onClick={() => set('kernel', id)}>
                 {name}
               </button>
             ))}
           </div>
         </Row>
 
-        {/* 2 */}
+        <Row label={t.boundaryLabel} hint={t.boundaryHint}>
+          <div className="seg">
+            {boundaries.map(([id, name]) => (
+              <button key={id} className={value.boundary === id ? 'on' : ''} onClick={() => set('boundary', id)}>
+                {name}
+              </button>
+            ))}
+          </div>
+        </Row>
+
+        <Row label={t.alphaLabel} hint={t.alphaHint}>
+          <input
+            type="range" min={0.1} max={0.9} step={0.05} value={value.alphaThreshold}
+            onChange={(e) => set('alphaThreshold', Number(e.target.value))}
+          />
+          <span className="adv-value">{Math.round(value.alphaThreshold * 100)}%</span>
+        </Row>
+
         <Row label={t.binsLabel} hint={t.binsHint} tag={sharpTag}>
           <input
             type="range" min={3} max={6} step={1} value={value.quantBits}
             onChange={(e) => set('quantBits', Number(e.target.value))}
           />
+          <span className="adv-value">{2 ** (8 - value.quantBits)} {t.binsUnit}</span>
+        </Row>
+
+        <Row label={t.mergeLabel} hint={t.mergeHint} tag={sharpTag}>
+          <input
+            type="range" min={0} max={3} step={1} value={value.binMerge}
+            onChange={(e) => set('binMerge', Number(e.target.value))}
+          />
           <span className="adv-value">
-            {2 ** (8 - value.quantBits)} {t.binsUnit}
+            {value.binMerge === 0 ? t.mergeOff : `±${value.binMerge} ${t.mergeUnit}`}
           </span>
         </Row>
 
-        {/* 3 */}
         <Row label={t.dominanceLabel} hint={t.dominanceHint} tag={sharpTag}>
           <input
             type="range" min={0} max={0.9} step={0.05} value={value.dominance}
@@ -100,61 +121,14 @@ export default function AdvancedPanel({ value, onChange, onClose, t, sharpActive
           </span>
         </Row>
 
-        {/* 4 */}
-        <Row label={t.sourceLabel} hint={t.sourceHint}>
+        <Row label={t.refineLabel} hint={t.refineHint} tag={sharpTag}>
           <div className="seg">
-            {smoothings.map(([id, name]) => (
-              <button key={id} className={value.smoothing === id ? 'on' : ''} onClick={() => set('smoothing', id)}>
+            {refines.map(([id, name]) => (
+              <button key={id} className={value.refine === id ? 'on' : ''} onClick={() => set('refine', id)}>
                 {name}
               </button>
             ))}
           </div>
-          <div className="adv-sub">
-            <label>{t.maxSourceLabel}</label>
-            <input
-              type="range" min={200} max={2400} step={100} value={value.maxSource}
-              onChange={(e) => set('maxSource', Number(e.target.value))}
-            />
-            <span className="adv-value">{value.maxSource}px</span>
-          </div>
-        </Row>
-
-        {/* 5 */}
-        <Row label={t.phaseLabel} hint={t.phaseHint}>
-          <div className="adv-sub">
-            <label>X</label>
-            <input
-              type="range" min={0} max={0.9} step={0.1} value={value.phaseX}
-              onChange={(e) => set('phaseX', Number(e.target.value))}
-            />
-            <span className="adv-value">{value.phaseX.toFixed(1)}</span>
-          </div>
-          <div className="adv-sub">
-            <label>Y</label>
-            <input
-              type="range" min={0} max={0.9} step={0.1} value={value.phaseY}
-              onChange={(e) => set('phaseY', Number(e.target.value))}
-            />
-            <span className="adv-value">{value.phaseY.toFixed(1)}</span>
-          </div>
-        </Row>
-
-        {/* 6 */}
-        <Row label={t.alphaLabel} hint={t.alphaHint}>
-          <input
-            type="range" min={0.1} max={0.9} step={0.05} value={value.alphaThreshold}
-            onChange={(e) => set('alphaThreshold', Number(e.target.value))}
-          />
-          <span className="adv-value">{Math.round(value.alphaThreshold * 100)}%</span>
-        </Row>
-
-        {/* 7 */}
-        <Row label={t.saturationLabel} hint={t.saturationHint}>
-          <input
-            type="range" min={0.6} max={1.8} step={0.05} value={value.saturation}
-            onChange={(e) => set('saturation', Number(e.target.value))}
-          />
-          <span className="adv-value">{value.saturation.toFixed(2)}×</span>
         </Row>
       </div>
 
