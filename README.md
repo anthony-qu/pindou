@@ -16,9 +16,19 @@ leaves your device.
    - **Sharp** takes the dominant colour in each cell — right for anime, logos and sprites,
      where averaging would smear outlines into halos.
 4. **Match** every cell to its nearest Mard bead using CIEDE2000 in CIELAB.
-5. **Read the chart** — pan and zoom (pinch on a phone), codes appear as you zoom in,
+5. **Simplify**, with two sliders that each do one thing:
+   - **Colours** merges bead codes that look alike, closest and least-used first. A photo lands
+     at 150+ codes; pull this down and watch the count fall one merge at a time until it is
+     something you can actually buy and bead.
+   - **Tidy** absorbs stray beads smaller than the threshold into what surrounds them.
+
+   Neither blurs — flat areas and hard edges are untouched.
+6. **Read the chart** — pan and zoom (pinch on a phone), codes appear as you zoom in,
    with dashed gridlines every 5 cells and solid ones every 10 so you can count your place.
-6. **Shop from the bead list** — every code used, with its exact count.
+7. **Bead it** — pick a colour in the list to fade everything else back, then tap beads to tick
+   them off as you place them.
+8. **Shop from the bead list** — every code used, with its exact count.
+9. **Save** — projects are kept in this browser, and can be exported to a file you control.
 
 Transparent areas of the image become empty holes rather than white beads.
 
@@ -40,14 +50,15 @@ static host, no configuration needed.
 The pipeline splits into two deliberately separate stages:
 
 ```
-image ──▶ [A] downsample to a grid of true colours ──▶ [B] match each cell to a Mard code ──▶ render
-               expensive, runs once                       cheap, re-runs freely
+image ──▶ [A] downsample to true colours ──▶ [B] match to Mard codes ──▶ [C] simplify ──▶ render
+               expensive, runs once              cheap                     cheap, per slider move
 ```
 
-Stage A is cached, so stage B can be re-run whenever palette constraints change without
+Stage A is cached, so the later stages re-run whenever palette constraints change without
 re-reading the image. Measured worst case for a full 104×104 conversion where every one of
-the 10,816 cells is a different colour: **~28 ms**. That is what makes the planned features
-(inventory filtering, colour simplification) feel instant.
+the 10,816 cells is a different colour: **~28 ms**. The merge plan costs ~8 ms once per chart,
+after which a slider move is ~1 ms of work and 16–18 ms including React re-render and canvas
+redraw — one frame, so dragging stays smooth.
 
 | File | Role |
 | --- | --- |
@@ -56,6 +67,8 @@ the 10,816 cells is a different colour: **~28 ms**. That is what makes the plann
 | `src/lib/palette.ts` | Nearest-bead matcher: cheap shortlist, then accurate re-rank |
 | `src/lib/pixelate.ts` | Stage A — downsampling, aspect fitting, transparency |
 | `src/lib/chart.ts` | Stage B — palette matching and bead counts |
+| `src/lib/simplify.ts` | Stage C — colour merging and stray-bead cleanup |
+| `src/lib/projects.ts` | Saving, loading, and `.pindou.json` export/import |
 | `src/components/ChartCanvas.tsx` | The zoomable chart, gridlines and codes |
 
 See **DESIGN.md** for the decisions and why they were made, and **ROADMAP.md** for what is

@@ -82,6 +82,23 @@ color simplification) re-colors the entire chart instantly with no re-upload and
 
 **Stage B — match.** Nearest palette color by **CIEDE2000 in CIELAB**, not RGB.
 RGB nearest-neighbour makes visibly wrong choices on skin tones and greens.
+Shortlisted by cheap squared Lab distance, then re-ranked with the accurate metric.
+
+**Stage C — simplify.** Two independent operations on the matched chart, deliberately
+not combined into one control, because they fix two different problems:
+
+- *Colours slider* — agglomerative merging of the bead codes actually used. Merge cost is
+  a Ward-style criterion: perceptual distance scaled by the harmonic size of the two
+  groups, so near-identical codes and barely-used codes go first while a large block of a
+  distinctive colour survives. The full merge order is computed once, so the slider is an
+  index into it: every stop is exactly one merge, the count is exact and monotonic, and
+  dragging back and forth is stable.
+- *Tidy slider* — absorbs connected blobs below a size threshold into whatever surrounds
+  them, using **8-connectivity** so a single-bead-wide diagonal line survives (under
+  4-connectivity it would read as isolated dots and be destroyed).
+
+Neither blurs. Flat areas and hard edges are untouched by both. Rejected alternatives and
+why are recorded in ROADMAP.md under the shipped R1 entry.
 
 ## 6. Display
 
@@ -93,9 +110,28 @@ RGB nearest-neighbour makes visibly wrong choices on skin tones and greens.
 - Bead count list: swatch, code, count, sorted by count descending.
 - Phone is a first-class target: the author intends to bead with the phone next to the board.
 
-## 7. v1 scope
+## 7. Work mode
 
-Upload → pick canvas size → downsample (average/sharp) → match to Mard → zoomable grid with
-codes → bead count list. Bilingual. Deployed.
+The phone is the device that sits next to the pegboard, so placing beads is a first-class
+mode, not a view option. Selecting a colour fades everything else back and outlines that
+colour; tapping a bead ticks it off; a placed bead shows its tick instead of its code,
+because drawing both in one cell leaves neither readable.
 
-Nothing else. Everything in ROADMAP.md is additive and does not require revisiting these decisions.
+Ticking comes in fast bursts, so the progress update must be functional — a handler that
+copied the array out of its closure would let every tap in a burst overwrite the previous
+one, and only the last would survive.
+
+## 8. Saved projects
+
+localStorage, plus export/import of a `.pindou.json` file. Same-device by design.
+Stored source images are re-encoded at most 640px on the longest side — the grid is at most
+104 cells, so more resolution buys nothing and it keeps roughly 90 projects inside the
+storage budget. PNG where transparency must survive, JPEG otherwise.
+
+Clearing site data loses saves. That is exactly why the export button is not optional.
+
+## 9. Measured cost
+
+Worst case, 104×104 with every cell a distinct colour: stage A ~6ms, stage B ~20ms.
+Merge plan ~8ms, computed once per chart. A slider move re-runs only stage C: ~1ms of work,
+16-18ms including React re-render and canvas redraw — one frame, so dragging is smooth.

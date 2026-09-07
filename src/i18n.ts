@@ -3,6 +3,10 @@
 
 export type Lang = 'en' | 'zh'
 
+/** Widened string values, so a component accepts either language rather than
+ *  only the English literals that `as const` would otherwise pin it to. */
+export type Strings = { [K in keyof (typeof STRINGS)['en']]: string }
+
 export const STRINGS = {
   en: {
     title: 'Pindou',
@@ -11,7 +15,6 @@ export const STRINGS = {
     drop: 'Drop an image here, or click to choose',
     dropHint: 'PNG, JPG, WebP or GIF. Transparent areas become empty holes.',
     canvasSize: 'Canvas size',
-    beadsWide: 'beads',
     method: 'Detail',
     average: 'Smooth',
     averageHint: 'Averages each cell. Best for photos.',
@@ -22,16 +25,41 @@ export const STRINGS = {
     viewChart: 'Chart',
     chartHint: 'Pinch or scroll to zoom. Codes appear as you zoom in.',
     gridSize: 'Grid',
-    coloursUsed: 'Colours used',
-    totalBeads: 'Total beads',
+    coloursUsed: 'Colours',
+    totalBeads: 'Beads',
     beadList: 'Bead list',
-    code: 'Code',
-    count: 'Count',
     reset: 'New image',
-    zoomToRead: 'Zoom in to read the codes',
-    working: 'Converting…',
     badImage: 'That file could not be read as an image.',
     fitNote: 'Aspect ratio is preserved; the image fills the canvas as far as it can.',
+
+    simplify: 'Simplify',
+    colourCount: 'Colours',
+    colourCountHint: 'Merges bead codes that look alike, starting with the closest and least-used.',
+    cleanup: 'Tidy',
+    cleanupHint: 'Absorbs stray beads smaller than this into what surrounds them.',
+    cleanupOff: 'off',
+    cleanupUnit: 'beads',
+    originalColours: 'was',
+
+    workMode: 'Work mode',
+    workHint: 'Pick a colour to place, then tap beads to tick them off.',
+    allColours: 'Show all',
+    placing: 'Placing',
+    done: 'done',
+    clearProgress: 'Clear ticks',
+
+    save: 'Save',
+    saved: 'Saved',
+    projects: 'Saved projects',
+    noProjects: 'Nothing saved yet.',
+    open: 'Open',
+    remove: 'Delete',
+    exportFile: 'Export file',
+    importFile: 'Open file',
+    storageFull: 'Browser storage is full. Delete a project, or export this one to a file.',
+    savedInBrowser: 'Saved in this browser only. Export to a file to keep a copy you control.',
+    nameProject: 'Project name',
+    untitled: 'Untitled',
   },
   zh: {
     title: '拼豆',
@@ -40,7 +68,6 @@ export const STRINGS = {
     drop: '把图片拖到这里，或点击选择',
     dropHint: '支持 PNG、JPG、WebP、GIF。透明区域会留空不放豆。',
     canvasSize: '画布尺寸',
-    beadsWide: '豆',
     method: '细节',
     average: '平滑',
     averageHint: '每格取平均色，适合照片。',
@@ -51,17 +78,40 @@ export const STRINGS = {
     viewChart: '图纸',
     chartHint: '双指或滚轮缩放，放大后显示色号。',
     gridSize: '网格',
-    coloursUsed: '使用色数',
-    totalBeads: '豆子总数',
+    coloursUsed: '色数',
+    totalBeads: '豆子',
     beadList: '色号清单',
-    code: '色号',
-    count: '数量',
     reset: '换一张',
-    zoomToRead: '放大以查看色号',
-    working: '转换中…',
     badImage: '这个文件无法作为图片读取。',
     fitNote: '保持原图比例，尽可能填满画布。',
+
+    simplify: '简化',
+    colourCount: '色数',
+    colourCountHint: '合并看起来相近的色号，从最接近、用得最少的开始。',
+    cleanup: '清理',
+    cleanupHint: '把小于这个大小的零散豆子并入周围颜色。',
+    cleanupOff: '关',
+    cleanupUnit: '颗',
+    originalColours: '原',
+
+    workMode: '拼豆模式',
+    workHint: '选一个颜色，然后点豆子打勾。',
+    allColours: '显示全部',
+    placing: '正在拼',
+    done: '完成',
+    clearProgress: '清除打勾',
+
+    save: '保存',
+    saved: '已保存',
+    projects: '已保存的作品',
+    noProjects: '还没有保存的作品。',
+    open: '打开',
+    remove: '删除',
+    exportFile: '导出文件',
+    importFile: '打开文件',
+    storageFull: '浏览器存储已满。请删除一个作品，或把当前作品导出成文件。',
+    savedInBrowser: '只保存在这个浏览器里。导出成文件可以自己保管一份。',
+    nameProject: '作品名称',
+    untitled: '未命名',
   },
 } as const
-
-export type StringKey = keyof (typeof STRINGS)['en']

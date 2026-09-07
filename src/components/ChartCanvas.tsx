@@ -7,14 +7,23 @@ import { readableInkFor } from '../lib/color'
 const CODE_VISIBLE_AT = 17
 /** Below this, per-cell gridlines turn into visual noise, so they are dropped. */
 const CELL_LINES_AT = 7
+/** Below this, a placed-bead tick is too small to read. */
+const TICK_VISIBLE_AT = 6
 
 const MIN_SCALE = 0.5
 const MAX_SCALE = 90
+/** Pointer travel below which a gesture counts as a tap, not a drag. */
+const TAP_SLOP = 5
 
 interface Props {
   chart: BeadChart
   /** Chart view draws gridlines and codes; preview shows the bare image. */
   showGrid: boolean
+  /** Palette index to isolate, or null for the whole chart. */
+  highlight: number | null
+  /** One byte per cell: which beads have been placed. */
+  placed: Uint8Array | null
+  onTogglePlaced?: (cell: number) => void
 }
 
 /** Renders the chart at 1px per cell once, then scales it up with smoothing
@@ -44,7 +53,9 @@ function useChartBitmap(chart: BeadChart) {
   }, [chart])
 }
 
-export default function ChartCanvas({ chart, showGrid }: Props) {
+export default function ChartCanvas({
+  chart, showGrid, highlight, placed, onTogglePlaced,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   const bitmap = useChartBitmap(chart)
@@ -52,7 +63,14 @@ export default function ChartCanvas({ chart, showGrid }: Props) {
   const [view, setView] = useState({ scale: 1, ox: 0, oy: 0 })
   const [size, setSize] = useState({ w: 0, h: 0 })
 
-  // Fit the whole chart in view whenever the chart or the container changes.
+  // Kept in a ref so the gesture handlers, which are bound once, always read
+  // the current transform without being torn down and rebuilt on every pan.
+  const viewRef = useRef(view)
+  viewRef.current = view
+
+  const tapRef = useRef<{ cell: number; onToggle?: (c: number) => void }>({ cell: -1 })
+  tapRef.current.onToggle = onTogglePlaced
+
   const fit = useCallback(() => {
     const w = wrapRef.current?.clientWidth ?? 0
     const h = wrapRef.current?.clientHeight ?? 0
@@ -69,15 +87,22 @@ export default function ChartCanvas({ chart, showGrid }: Props) {
   useEffect(() => {
     const el = wrapRef.current
     if (!el) return
-    const ro = new ResizeObserver(() => {
-      setSize({ w: el.clientWidth, h: el.clientHeight })
-    })
+    const ro = new ResizeObserver(() => setSize({ w: el.clientWidth, h: el.clientHeight }))
     ro.observe(el)
     setSize({ w: el.clientWidth, h: el.clientHeight })
     return () => ro.disconnect()
   }, [])
 
   useEffect(fit, [fit, size.w, size.h])
+
+  /** Screen point -> cell index, or -1 outside the chart. */
+  const cellAt = useCallback((sx: number, sy: number) => {
+    const { scale, ox, oy } = viewRef.current
+    const x = Math.floor((sx - ox) / scale)
+    const y = Math.floor((sy - oy) / scale)
+    if (x < 0 || y < 0 || x >= chart.width || y >= chart.height) return -1
+    return y * chart.width + x
+  }, [chart.width, chart.height])
 
   /** Zoom about a fixed screen point so the cell under the cursor stays put. */
   const zoomAt = useCallback((sx: number, sy: number, factor: number) => {
@@ -102,14 +127,15 @@ export default function ChartCanvas({ chart, showGrid }: Props) {
     return () => el.removeEventListener('wheel', onWheel)
   }, [zoomAt])
 
-  // Drag to pan, two-finger pinch to zoom.
-  const gesture = useRef<{ x: number; y: number; dist: number | null } | null>(null)
-
+  // Drag to pan, two-finger pinch to zoom, tap to tick a bead off.
   useEffect(() => {
     const el = wrapRef.current
     if (!el) return
+    let g: { x: number; y: number; dist: number | null } | null = null
+    let travel = 0
+    let startCell = -1
 
-    const pointOf = (t: TouchList | React.TouchList) => {
+    const pointOf = (t: TouchList) => {
       const r = el.getBoundingClientRect()
       if (t.length >= 2) {
         return {
@@ -121,20 +147,28 @@ export default function ChartCanvas({ chart, showGrid }: Props) {
       return { x: t[0].clientX - r.left, y: t[0].clientY - r.top, dist: null }
     }
 
-    const onStart = (e: TouchEvent) => { gesture.current = pointOf(e.touches) }
+    const onStart = (e: TouchEvent) => {
+      g = pointOf(e.touches)
+      travel = 0
+      startCell = e.touches.length === 1 ? cellAt(g.x, g.y) : -1
+    }
     const onMove = (e: TouchEvent) => {
-      if (!gesture.current) return
+      if (!g) return
       e.preventDefault()
       const p = pointOf(e.touches)
-      const prev = gesture.current
-      if (p.dist !== null && prev.dist) {
-        zoomAt(p.x, p.y, p.dist / prev.dist)
-      }
-      setView((v) => ({ ...v, ox: v.ox + (p.x - prev.x), oy: v.oy + (p.y - prev.y) }))
-      gesture.current = p
+      travel += Math.hypot(p.x - g.x, p.y - g.y)
+      if (p.dist !== null && g.dist) zoomAt(p.x, p.y, p.dist / g.dist)
+      setView((v) => ({ ...v, ox: v.ox + (p.x - g!.x), oy: v.oy + (p.y - g!.y) }))
+      g = p
     }
     const onEnd = (e: TouchEvent) => {
-      gesture.current = e.touches.length > 0 ? pointOf(e.touches) : null
+      if (e.touches.length === 0) {
+        if (travel < TAP_SLOP && startCell >= 0) tapRef.current.onToggle?.(startCell)
+        g = null
+      } else {
+        g = pointOf(e.touches)
+      }
+      startCell = -1
     }
 
     el.addEventListener('touchstart', onStart, { passive: false })
@@ -147,17 +181,25 @@ export default function ChartCanvas({ chart, showGrid }: Props) {
       el.removeEventListener('touchend', onEnd)
       el.removeEventListener('touchcancel', onEnd)
     }
-  }, [zoomAt])
+  }, [zoomAt, cellAt])
 
   const onMouseDown = (e: React.MouseEvent) => {
+    const el = wrapRef.current
+    if (!el) return
+    const r = el.getBoundingClientRect()
     const startX = e.clientX, startY = e.clientY
-    const base = { ...view }
+    const cell = cellAt(startX - r.left, startY - r.top)
+    const base = { ...viewRef.current }
+
     const move = (m: MouseEvent) => {
       setView({ ...base, ox: base.ox + (m.clientX - startX), oy: base.oy + (m.clientY - startY) })
     }
-    const up = () => {
+    const up = (m: MouseEvent) => {
       window.removeEventListener('mousemove', move)
       window.removeEventListener('mouseup', up)
+      if (Math.hypot(m.clientX - startX, m.clientY - startY) < TAP_SLOP && cell >= 0) {
+        tapRef.current.onToggle?.(cell)
+      }
     }
     window.addEventListener('mousemove', move)
     window.addEventListener('mouseup', up)
@@ -195,13 +237,59 @@ export default function ChartCanvas({ chart, showGrid }: Props) {
     ctx.imageSmoothingEnabled = false
     ctx.drawImage(bitmap, ox, oy, w, h)
 
-    if (!showGrid) return
-
-    // Only draw the cells actually on screen.
+    // Only the cells actually on screen are worth touching.
     const c0 = Math.max(0, Math.floor((0 - ox) / scale))
     const c1 = Math.min(chart.width, Math.ceil((size.w - ox) / scale))
     const r0 = Math.max(0, Math.floor((0 - oy) / scale))
     const r1 = Math.min(chart.height, Math.ceil((size.h - oy) / scale))
+
+    // Work mode: fade everything, then repaint just the colour being placed.
+    if (highlight !== null) {
+      ctx.fillStyle = 'rgba(250, 247, 242, 0.82)'
+      ctx.fillRect(ox, oy, w, h)
+      const bead = PALETTE[highlight]
+      ctx.fillStyle = bead.hex
+      for (let y = r0; y < r1; y++) {
+        for (let x = c0; x < c1; x++) {
+          if (chart.cells[y * chart.width + x] !== highlight) continue
+          ctx.fillRect(ox + x * scale, oy + y * scale, scale + 0.5, scale + 0.5)
+        }
+      }
+      if (scale >= 4) {
+        ctx.strokeStyle = 'rgba(0,0,0,0.7)'
+        ctx.lineWidth = 1
+        for (let y = r0; y < r1; y++) {
+          for (let x = c0; x < c1; x++) {
+            if (chart.cells[y * chart.width + x] !== highlight) continue
+            ctx.strokeRect(ox + x * scale + 0.5, oy + y * scale + 0.5, scale - 1, scale - 1)
+          }
+        }
+      }
+    }
+
+    // Placed beads get a tick so you can see how far you have got.
+    if (placed && scale >= TICK_VISIBLE_AT) {
+      ctx.lineWidth = Math.max(1.4, scale * 0.11)
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
+      for (let y = r0; y < r1; y++) {
+        for (let x = c0; x < c1; x++) {
+          const cell = y * chart.width + x
+          const idx = chart.cells[cell]
+          if (idx === EMPTY || !placed[cell]) continue
+          if (highlight !== null && idx !== highlight) continue
+          const cx = ox + x * scale, cy = oy + y * scale
+          ctx.strokeStyle = readableInkFor(PALETTE[idx].lab.L)
+          ctx.beginPath()
+          ctx.moveTo(cx + scale * 0.24, cy + scale * 0.52)
+          ctx.lineTo(cx + scale * 0.43, cy + scale * 0.72)
+          ctx.lineTo(cx + scale * 0.77, cy + scale * 0.28)
+          ctx.stroke()
+        }
+      }
+    }
+
+    if (!showGrid) return
 
     const line = (i: number, vertical: boolean, style: string, width: number, dash: number[]) => {
       ctx.strokeStyle = style
@@ -236,7 +324,6 @@ export default function ChartCanvas({ chart, showGrid }: Props) {
     }
     ctx.setLineDash([])
 
-    // Outer border.
     ctx.strokeStyle = 'rgba(0,0,0,0.85)'
     ctx.lineWidth = 2
     ctx.strokeRect(ox, oy, w, h)
@@ -248,14 +335,19 @@ export default function ChartCanvas({ chart, showGrid }: Props) {
     ctx.font = `600 ${Math.round(scale * 0.34)}px ui-monospace, SFMono-Regular, Menlo, monospace`
     for (let y = r0; y < r1; y++) {
       for (let x = c0; x < c1; x++) {
-        const idx = chart.cells[y * chart.width + x]
+        const cell = y * chart.width + x
+        const idx = chart.cells[cell]
         if (idx === EMPTY) continue
+        if (highlight !== null && idx !== highlight) continue
+        // A placed bead shows its tick instead of its code: drawing both in one
+        // cell leaves neither readable, and once it is placed the code is spent.
+        if (placed && placed[cell] && scale >= TICK_VISIBLE_AT) continue
         const bead = PALETTE[idx]
         ctx.fillStyle = readableInkFor(bead.lab.L)
         ctx.fillText(bead.code, ox + (x + 0.5) * scale, oy + (y + 0.55) * scale)
       }
     }
-  }, [chart, bitmap, view, size, showGrid])
+  }, [chart, bitmap, view, size, showGrid, highlight, placed])
 
   return (
     <div ref={wrapRef} className="canvas-wrap" onMouseDown={onMouseDown}>

@@ -1,39 +1,11 @@
 # Roadmap — agreed, deferred until after v1
 
-These were all decided during the design conversation. v1 ships without them, but none of them
-require changing the v1 architecture. Order below is roughly the order they should be built.
+Decided during the design conversation. None require changing the core architecture.
+Order is roughly the order they should be built.
 
 ---
 
-### R1 — "Simplify colors" slider  *(highest value; build first after v1)*
-
-The problem: independent per-cell matching against 291 colors will use 120+ distinct bead codes
-on a photo, and because the Mard palette contains many perceptually near-identical entries,
-dozens of those are pairs you cannot tell apart in hand. Miserable to bead, absurd to buy for.
-
-The mechanism: **agglomerative merging of the codes actually used**. Repeatedly merge the pair
-that costs least to merge, where cost weighs both perceptual distance (CIEDE2000) and how few
-beads use each code. Compute the full merge sequence once.
-
-Why this shape: the slider is then just an index into that precomputed list, so every position is
-exactly one merge event — genuinely discrete stops, instant preview, no recomputation. The label
-shows the true count at each stop (`47 → 38 → 31 → 24…`). Near-identical pairs collapse first,
-then rarely-used colors get absorbed into their nearest neighbour. Degrades in the order a human
-would choose by hand.
-
-Default position: **no simplification** — show the raw count the conversion produced, let the user
-pull it down.
-
-Rejected: spatial smoothing / max-pooling as the mechanism. Blurring averages neighbours into new
-in-between colors that then re-match to the palette, which often *increases* the distinct count.
-Mode-pooling reduces it only as a side effect of destroying detail, with no real control over the result.
-
-### R2 — "Remove isolated beads" toggle
-
-A lone red bead stranded in a field of blue is a genuine annoyance when beading. A mode filter
-fixes exactly this. Kept as its **own control**, deliberately not folded into R1 — it is a different
-axis (spatial noise, not color count), and two sliders that each do one comprehensible thing beat
-one that does both muddily.
+## Still to build
 
 ### R3 — Background removal
 
@@ -55,18 +27,6 @@ source pixels were transparent. Doing it after downsampling throws away the mode
 Click a region, or a color in the legend, to mark it "no bead". Needed regardless of how good R3 is —
 both methods will occasionally be wrong, and at 52x52 a wrong mask ruins the chart. Doubles as a
 general cleanup tool.
-
-### R5 — Save & reopen projects
-
-`localStorage` for the project list, plus a **download / upload project file** button as the backup
-the user actually controls. No backend, no accounts. Clearing browser data loses saves, which is
-exactly why the download button is not optional.
-
-### R6 — Work mode
-
-Dim everything except one bead color at a time, so you place all the A1s, then all the B7s.
-Plus progress ticking — mark beads or rows as placed. This is the feature that makes beading
-from the phone screen actually pleasant.
 
 ### R7 — Inventory
 
@@ -95,3 +55,63 @@ saturation boost to survive reduction to a bead palette without going muddy.
 
 Detect when the input is already pixel art at a native sprite size and sample rather than average,
 so a 32x32 sprite maps cleanly onto the grid instead of blurring.
+
+---
+
+## Shipped
+
+Kept here because the reasoning still explains why they work the way they do.
+
+### R1 — "Simplify colors" slider
+
+The problem: independent per-cell matching against 291 colors will use 120+ distinct bead codes
+on a photo, and because the Mard palette contains many perceptually near-identical entries,
+dozens of those are pairs you cannot tell apart in hand. Miserable to bead, absurd to buy for.
+
+The mechanism: **agglomerative merging of the codes actually used**. Repeatedly merge the pair
+that costs least to merge, where cost weighs both perceptual distance (CIEDE2000) and how few
+beads use each code. Compute the full merge sequence once.
+
+Why this shape: the slider is then just an index into that precomputed list, so every position is
+exactly one merge event — genuinely discrete stops, instant preview, no recomputation. The label
+shows the true count at each stop (`47 → 38 → 31 → 24…`). Near-identical pairs collapse first,
+then rarely-used colors get absorbed into their nearest neighbour. Degrades in the order a human
+would choose by hand.
+
+Default position: **no simplification** — show the raw count the conversion produced, let the user
+pull it down.
+
+Shipped with a Ward-style merge cost — perceptual distance scaled by the harmonic size of the two
+groups — so near-identical codes and barely-used codes merge first while a large block of a
+distinctive colour survives to the end.
+
+Rejected alternatives:
+
+- *Spatial smoothing / max-pooling as the mechanism.* Blurring averages neighbours into new
+  in-between colors that then re-match to the palette, which often *increases* the distinct count.
+  Mode-pooling reduces it only as a side effect of destroying detail, with no real control.
+- *k-means quantisation.* Exact count control, but each k is a fresh run, so colours swap identity
+  between adjacent stops and the preview jumps instead of settling. Also ignores space entirely.
+- *Region segmentation.* The most literal reading of the brief and genuinely local, but the most
+  code to build and tune, and it tends to posterise soft shading.
+- *One spatially-aware slider* combining both effects. Elegant, but you cannot then say
+  "merge less, clean more", and the behaviour is much harder to predict.
+
+### R2 — "Tidy" slider (remove isolated beads)
+
+A lone red bead stranded in a field of blue is a genuine annoyance when beading. A mode filter
+fixes exactly this. Kept as its **own control**, deliberately not folded into R1 — it is a different
+axis (spatial noise, not color count), and two sliders that each do one comprehensible thing beat
+one that does both muddily.
+
+### R5 — Save & reopen projects
+
+`localStorage` for the project list, plus a **download / upload project file** button as the backup
+the user actually controls. No backend, no accounts. Clearing browser data loses saves, which is
+exactly why the download button is not optional.
+
+### R6 — Work mode
+
+Dim everything except one bead color at a time, so you place all the A1s, then all the B7s.
+Plus progress ticking — mark beads or rows as placed. This is the feature that makes beading
+from the phone screen actually pleasant.
