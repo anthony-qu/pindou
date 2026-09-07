@@ -255,15 +255,31 @@ export default function ChartCanvas({
           ctx.fillRect(ox + x * scale, oy + y * scale, scale + 0.5, scale + 0.5)
         }
       }
-      if (scale >= 4) {
-        ctx.strokeStyle = 'rgba(0,0,0,0.7)'
+      // Outline the perimeter of each highlighted cluster only — the edges whose
+      // neighbour is a different colour. Boxing every cell individually would
+      // lay two lines side by side between adjacent highlighted cells, which
+      // reads as heavy black. Gated at the same zoom as the other cell lines so
+      // it disappears on zoom out instead of turning the chart into a black mess.
+      if (scale >= CELL_LINES_AT) {
+        const W = chart.width, H = chart.height
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)'
         ctx.lineWidth = 1
+        ctx.beginPath()
         for (let y = r0; y < r1; y++) {
           for (let x = c0; x < c1; x++) {
-            if (chart.cells[y * chart.width + x] !== highlight) continue
-            ctx.strokeRect(ox + x * scale + 0.5, oy + y * scale + 0.5, scale - 1, scale - 1)
+            if (chart.cells[y * W + x] !== highlight) continue
+            // Half-pixel offsets so hairlines land on a pixel, not across two.
+            const x1 = Math.round(ox + x * scale) + 0.5
+            const y1 = Math.round(oy + y * scale) + 0.5
+            const x2 = Math.round(ox + (x + 1) * scale) + 0.5
+            const y2 = Math.round(oy + (y + 1) * scale) + 0.5
+            if (y === 0 || chart.cells[(y - 1) * W + x] !== highlight) { ctx.moveTo(x1, y1); ctx.lineTo(x2, y1) }
+            if (y === H - 1 || chart.cells[(y + 1) * W + x] !== highlight) { ctx.moveTo(x1, y2); ctx.lineTo(x2, y2) }
+            if (x === 0 || chart.cells[y * W + x - 1] !== highlight) { ctx.moveTo(x1, y1); ctx.lineTo(x1, y2) }
+            if (x === W - 1 || chart.cells[y * W + x + 1] !== highlight) { ctx.moveTo(x2, y1); ctx.lineTo(x2, y2) }
           }
         }
+        ctx.stroke()
       }
     }
 
