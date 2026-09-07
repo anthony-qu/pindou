@@ -147,6 +147,14 @@ invisible by construction, which rules most candidates out.
 6. **Bead coverage threshold** — the old `ALPHA_THRESHOLD`
 7. **Saturation boost** — applied before reduction
 
+The panel is **non-modal and docked over the left of the chart**, not a centred dialog behind
+a scrim. The entire point of these controls is watching the chart change as you drag them, so
+the chart stays visible and pannable, and clicking outside does not dismiss the panel. It is
+anchored to the canvas rather than the viewport so it never covers the canvas-size or
+Smooth/Sharp buttons — two of the settings apply only to Sharp, so you need to switch method
+while the panel is open. On a phone it becomes a bottom sheet at 62vh, leaving the top of the
+chart visible.
+
 Defaults reproduce the original conversion exactly, which a test asserts, so Reset always
 returns to a known baseline. Stored per browser rather than per project: these are tuning
 preferences, not content.

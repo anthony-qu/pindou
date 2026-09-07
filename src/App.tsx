@@ -310,7 +310,18 @@ export default function App() {
               </dl>
             </div>
 
-            <ChartCanvas chart={chart} showGrid={showGrid} highlight={highlight} dark={dark} />
+            <div className="canvas-area">
+              <ChartCanvas chart={chart} showGrid={showGrid} highlight={highlight} dark={dark} />
+              {advOpen && (
+                <AdvancedPanel
+                  value={advanced}
+                  onChange={setAdvanced}
+                  onClose={() => setAdvOpen(false)}
+                  t={t}
+                  sharpActive={method === 'sharp'}
+                />
+              )}
+            </div>
 
             <div className="stage-foot">
               <p className="stage-hint">
@@ -350,16 +361,6 @@ export default function App() {
             />
             <p className="muted small">{t.savedInBrowser}</p>
           </aside>
-
-          {advOpen && (
-            <AdvancedPanel
-              value={advanced}
-              onChange={setAdvanced}
-              onClose={() => setAdvOpen(false)}
-              t={t}
-              sharpActive={method === 'sharp'}
-            />
-          )}
         </main>
       )}
     </div>
