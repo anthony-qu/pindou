@@ -1,0 +1,202 @@
+/* Mobile-first: the phone is the primary device, because that is what sits
+   next to the pegboard while you bead. */
+
+:root {
+  --paper: #faf7f2;
+  --card: #ffffff;
+  --ink: #1b1714;
+  --ink-soft: #6d635a;
+  --line: #e2dad0;
+  --accent: #d94f2b;
+  --accent-soft: #fdeee9;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", Roboto, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+button { font: inherit; cursor: pointer; }
+
+.app { display: flex; flex-direction: column; min-height: 100%; }
+.topbar { flex: 0 0 auto; }
+
+/* ---------- top bar ---------- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 2px solid var(--ink);
+  background: var(--card);
+}
+
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.brand-mark { font-size: 24px; color: var(--accent); line-height: 1; }
+.brand h1 { margin: 0; font-size: 18px; letter-spacing: -0.01em; }
+.brand p { margin: 0; font-size: 12px; color: var(--ink-soft); }
+
+.topbar-right { display: flex; align-items: center; gap: 8px; }
+
+.ghost {
+  border: 2px solid var(--ink);
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.ghost:hover { background: var(--accent-soft); }
+
+.langswitch { display: flex; border: 2px solid var(--ink); border-radius: 8px; overflow: hidden; }
+.langswitch button {
+  border: 0; background: var(--card); color: var(--ink-soft);
+  padding: 7px 10px; font-size: 12px; font-weight: 700;
+}
+.langswitch button.on { background: var(--ink); color: var(--card); }
+
+/* ---------- landing ---------- */
+
+.intro {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 32px 16px;
+}
+
+.dropzone {
+  width: 100%;
+  max-width: 520px;
+  border: 3px dashed var(--line);
+  border-radius: 16px;
+  background: var(--card);
+  padding: 44px 24px;
+  text-align: center;
+  transition: border-color .15s, background .15s;
+}
+.dropzone:hover, .dropzone.over { border-color: var(--accent); background: var(--accent-soft); }
+.drop-icon { font-size: 40px; color: var(--accent); line-height: 1; }
+.drop-label { margin: 14px 0 4px; font-weight: 700; }
+.drop-hint { margin: 0; font-size: 13px; color: var(--ink-soft); }
+.drop-error { margin: 12px 0 0; color: var(--accent); font-size: 13px; font-weight: 600; }
+.privacy { margin: 0; font-size: 12.5px; color: var(--ink-soft); text-align: center; }
+
+/* ---------- workspace ---------- */
+
+.workspace { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+
+.stage { display: flex; flex-direction: column; padding: 12px; gap: 10px; min-height: 0; }
+
+.controls { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end; }
+
+.ctrl { display: flex; flex-direction: column; gap: 5px; }
+.ctrl > label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .07em; color: var(--ink-soft);
+}
+
+.seg { display: flex; border: 2px solid var(--ink); border-radius: 9px; overflow: hidden; }
+.seg button {
+  border: 0; border-right: 2px solid var(--ink);
+  background: var(--card); color: var(--ink);
+  padding: 8px 12px; font-size: 13px; font-weight: 600; white-space: nowrap;
+}
+.seg button:last-child { border-right: 0; }
+.seg button.on { background: var(--ink); color: var(--card); }
+
+.stats { display: flex; gap: 16px; margin: 0; flex-wrap: wrap; }
+.stats dt {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .07em; color: var(--ink-soft);
+}
+.stats dd { margin: 2px 0 0; font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.canvas-wrap {
+  position: relative;
+  height: 58vh;
+  min-height: 280px;
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  background:
+    repeating-conic-gradient(#f1f3f4 0% 25%, #ffffff 0% 50%) 50% / 16px 16px;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;      /* we handle pinch and pan ourselves */
+  user-select: none;
+}
+.canvas-wrap:active { cursor: grabbing; }
+
+.fit-btn {
+  position: absolute; right: 10px; bottom: 10px;
+  width: 38px; height: 38px;
+  border: 2px solid var(--ink); border-radius: 9px;
+  background: rgba(255,255,255,.94); color: var(--ink);
+  font-size: 16px; line-height: 1;
+}
+
+.stage-hint { margin: 0; font-size: 12.5px; color: var(--ink-soft); }
+
+/* ---------- bead list ---------- */
+
+.sidebar { padding: 0 12px 20px; }
+
+.counts { border: 2px solid var(--ink); border-radius: 12px; background: var(--card); overflow: hidden; }
+.counts-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  padding: 10px 12px; border-bottom: 2px solid var(--ink);
+}
+.counts-head h2 { margin: 0; font-size: 14px; letter-spacing: .02em; }
+.counts-total { font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+
+.counts-list { list-style: none; margin: 0; padding: 0; max-height: 420px; overflow-y: auto; }
+.counts-list li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 20px 52px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.counts-list li:last-child { border-bottom: 0; }
+
+.swatch { width: 20px; height: 20px; border: 1.5px solid rgba(0,0,0,.5); border-radius: 4px; }
+.cc-code { font-weight: 700; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.cc-hex { color: var(--ink-soft); font-size: 11.5px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.cc-count { font-weight: 700; font-variant-numeric: tabular-nums; }
+.cc-bar {
+  position: absolute; left: 0; bottom: 0; height: 2px;
+  background: var(--accent); opacity: .55; pointer-events: none;
+}
+
+/* ---------- desktop ---------- */
+
+@media (min-width: 900px) {
+  /* Pin the whole app to the viewport so the canvas gets a bounded height to
+     fit into, and scroll the bead list rather than the page. */
+  html, body { overflow: hidden; }
+  .app { height: 100dvh; }
+  .workspace { flex-direction: row; gap: 0; min-height: 0; }
+  .stage { flex: 1; padding: 16px; min-height: 0; min-width: 0; }
+  .canvas-wrap { flex: 1; height: auto; min-height: 0; }
+  .sidebar { width: 340px; flex: 0 0 340px; border-left: 2px solid var(--ink); padding: 16px; overflow-y: auto; }
+  .counts-list { max-height: none; overflow: visible; }
+  .counts { display: flex; flex-direction: column; }
+  .brand h1 { font-size: 20px; }
+}
