@@ -92,6 +92,23 @@ export default function ChartCanvas({ chart, showGrid, highlight, dark }: Props)
 
   const [view, setView] = useState({ scale: 1, ox: 0, oy: 0 })
   const [size, setSize] = useState({ w: 0, h: 0 })
+  const [repaint, setRepaint] = useState(0)
+
+  // A phone can discard the canvas backing store while the tab is in the
+  // background, and it comes back blank. Nothing else would schedule a repaint,
+  // so the chart would stay empty until something happened to change. Force one
+  // whenever the page becomes visible again.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') setRepaint((n) => n + 1)
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('pageshow', onVisible)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('pageshow', onVisible)
+    }
+  }, [])
 
   // Kept in a ref so the gesture handlers, bound once, always read the current
   // transform without being torn down and rebuilt on every pan.
@@ -201,150 +218,166 @@ export default function ChartCanvas({ chart, showGrid, highlight, dark }: Props)
   }
 
   // Draw.
+  //
+  // Coalesced into an animation frame. A pinch emits touchmove far more often
+  // than the display refreshes, so drawing straight from the event painted the
+  // same frame several times over.
+  //
+  // The governing rule below: nothing may be drawn at the chart's full extent.
+  // Zoomed in, that extent is thousands of pixels across — 9360x9360 at maximum
+  // zoom on a 104 grid — and asking the browser to scale a bitmap into, or fill,
+  // a surface that size on every frame is what exhausted phones. Every
+  // operation is clamped to the cells actually on screen, so the cost of a
+  // frame depends on the size of the viewport and nothing else.
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas || !size.w || !size.h) return
-    const theme = dark ? 'dark' : 'light'
-    const dpr = window.devicePixelRatio || 1
-    const ctx = canvas.getContext('2d')!
-    // Assigning width or height reallocates the backing store — several
-    // megabytes — and resets the context, so only do it when the size actually
-    // changed. Previously every pinch frame reallocated, which is what pushes a
-    // phone into discarding the canvas.
-    const wantW = Math.round(size.w * dpr)
-    const wantH = Math.round(size.h * dpr)
-    if (canvas.width !== wantW || canvas.height !== wantH) {
-      canvas.width = wantW
-      canvas.height = wantH
-    }
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-    ctx.clearRect(0, 0, size.w, size.h)
-
-    const { scale, ox, oy } = view
-    const w = chart.width * scale
-    const h = chart.height * scale
-
-    // Empty cells must read as holes, not as white beads.
-    //
-    // Drawn as one patterned fill rather than a loop of 8px squares. The loop
-    // covered the chart's whole on-screen extent, not just the visible part, so
-    // its cost grew with the square of the zoom: 1,368,900 fillRect calls per
-    // redraw at maximum zoom on a 104 grid, against 7,056 when fitted. A pinch
-    // redraws on every touchmove, which saturated the main thread and left
-    // phones discarding the canvas backing store — the reported black screen.
-    ctx.save()
-    ctx.translate(ox, oy)
-    const holes = ctx.createPattern(holeTile, 'repeat')
-    if (holes) {
-      ctx.fillStyle = holes
-      ctx.fillRect(0, 0, w, h)
-    }
-    ctx.restore()
-
-    ctx.imageSmoothingEnabled = false
-    ctx.drawImage(bitmap, ox, oy, w, h)
-
-    // Only the cells actually on screen are worth touching.
-    const c0 = Math.max(0, Math.floor((0 - ox) / scale))
-    const c1 = Math.min(chart.width, Math.ceil((size.w - ox) / scale))
-    const r0 = Math.max(0, Math.floor((0 - oy) / scale))
-    const r1 = Math.min(chart.height, Math.ceil((size.h - oy) / scale))
-
-    // Isolate one colour: fade everything, then repaint just that colour.
-    if (highlight !== null) {
-      ctx.fillStyle = SCRIM[theme]
-      ctx.fillRect(ox, oy, w, h)
-      ctx.fillStyle = PALETTE[highlight].hex
-      for (let y = r0; y < r1; y++) {
-        for (let x = c0; x < c1; x++) {
-          if (chart.cells[y * chart.width + x] !== highlight) continue
-          ctx.fillRect(ox + x * scale, oy + y * scale, scale + 0.5, scale + 0.5)
-        }
+    const draw = () => {
+      const canvas = canvasRef.current
+      if (!canvas || !size.w || !size.h) return
+      const theme = dark ? 'dark' : 'light'
+      const dpr = window.devicePixelRatio || 1
+      const ctx = canvas.getContext('2d')!
+      // Assigning width or height reallocates the backing store — several
+      // megabytes — and resets the context, so only do it when the size
+      // actually changed.
+      const wantW = Math.round(size.w * dpr)
+      const wantH = Math.round(size.h * dpr)
+      if (canvas.width !== wantW || canvas.height !== wantH) {
+        canvas.width = wantW
+        canvas.height = wantH
       }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      ctx.clearRect(0, 0, size.w, size.h)
 
-      // Outline the perimeter of each highlighted cluster only — the edges whose
-      // neighbour is a different colour. Boxing every cell individually would
-      // lay two lines side by side between adjacent highlighted cells, which
-      // reads as heavy black. Gated at the same zoom as the other cell lines so
-      // it disappears on zoom out instead of turning the chart into a black mess.
-      if (scale >= CELL_LINES_AT) {
-        const W = chart.width, H = chart.height
-        ctx.strokeStyle = 'rgba(0,0,0,0.3)'
-        ctx.lineWidth = 1
-        ctx.beginPath()
+      const { scale, ox, oy } = view
+
+      // The cells actually on screen, and the rectangle they occupy.
+      const c0 = Math.max(0, Math.floor((0 - ox) / scale))
+      const c1 = Math.min(chart.width, Math.ceil((size.w - ox) / scale))
+      const r0 = Math.max(0, Math.floor((0 - oy) / scale))
+      const r1 = Math.min(chart.height, Math.ceil((size.h - oy) / scale))
+      if (c1 <= c0 || r1 <= r0) return          // chart entirely off screen
+
+      const vx = ox + c0 * scale
+      const vy = oy + r0 * scale
+      const vw = (c1 - c0) * scale
+      const vh = (r1 - r0) * scale
+
+      // Empty cells must read as holes, not as white beads. One patterned fill,
+      // translated so the tiling stays locked to the chart origin.
+      ctx.save()
+      ctx.translate(ox, oy)
+      const holes = ctx.createPattern(holeTile, 'repeat')
+      if (holes) {
+        ctx.fillStyle = holes
+        ctx.fillRect(c0 * scale, r0 * scale, vw, vh)
+      }
+      ctx.restore()
+
+      // Only the visible sub-rectangle of the bitmap is scaled up. The
+      // five-argument form would hand the browser a destination the size of the
+      // whole chart, which it may allocate in full before clipping.
+      ctx.imageSmoothingEnabled = false
+      ctx.drawImage(bitmap, c0, r0, c1 - c0, r1 - r0, vx, vy, vw, vh)
+
+      // Isolate one colour: fade everything, then repaint just that colour.
+      if (highlight !== null) {
+        ctx.fillStyle = SCRIM[theme]
+        ctx.fillRect(vx, vy, vw, vh)
+        ctx.fillStyle = PALETTE[highlight].hex
         for (let y = r0; y < r1; y++) {
           for (let x = c0; x < c1; x++) {
-            if (chart.cells[y * W + x] !== highlight) continue
-            // Half-pixel offsets so hairlines land on a pixel, not across two.
-            const x1 = Math.round(ox + x * scale) + 0.5
-            const y1 = Math.round(oy + y * scale) + 0.5
-            const x2 = Math.round(ox + (x + 1) * scale) + 0.5
-            const y2 = Math.round(oy + (y + 1) * scale) + 0.5
-            if (y === 0 || chart.cells[(y - 1) * W + x] !== highlight) { ctx.moveTo(x1, y1); ctx.lineTo(x2, y1) }
-            if (y === H - 1 || chart.cells[(y + 1) * W + x] !== highlight) { ctx.moveTo(x1, y2); ctx.lineTo(x2, y2) }
-            if (x === 0 || chart.cells[y * W + x - 1] !== highlight) { ctx.moveTo(x1, y1); ctx.lineTo(x1, y2) }
-            if (x === W - 1 || chart.cells[y * W + x + 1] !== highlight) { ctx.moveTo(x2, y1); ctx.lineTo(x2, y2) }
+            if (chart.cells[y * chart.width + x] !== highlight) continue
+            ctx.fillRect(ox + x * scale, oy + y * scale, scale + 0.5, scale + 0.5)
           }
         }
-        ctx.stroke()
-      }
-    }
 
-    if (!showGrid) return
-
-    const line = (i: number, vertical: boolean, style: string, width: number, dash: number[]) => {
-      ctx.strokeStyle = style
-      ctx.lineWidth = width
-      ctx.setLineDash(dash)
-      ctx.beginPath()
-      const p = Math.round(vertical ? ox + i * scale : oy + i * scale) + (width % 2 ? 0.5 : 0)
-      if (vertical) { ctx.moveTo(p, oy); ctx.lineTo(p, oy + h) }
-      else { ctx.moveTo(ox, p); ctx.lineTo(ox + w, p) }
-      ctx.stroke()
-    }
-
-    // Gridlines stay dark in both themes: they mostly cross beads, whose colours
-    // are arbitrary, and a light line would vanish on the many pale beads.
-    for (const vertical of [true, false]) {
-      const from = vertical ? c0 : r0
-      const to = vertical ? c1 : r1
-      if (scale >= CELL_LINES_AT) {
-        for (let i = from; i <= to; i++) {
-          if (i % 5 === 0) continue
-          line(i, vertical, 'rgba(0,0,0,0.13)', 1, [])
+        // Outline the perimeter of each highlighted cluster only — the edges
+        // whose neighbour is a different colour. Boxing every cell individually
+        // would lay two lines side by side between adjacent highlighted cells,
+        // which reads as heavy black.
+        if (scale >= CELL_LINES_AT) {
+          const W = chart.width, H = chart.height
+          ctx.strokeStyle = 'rgba(0,0,0,0.3)'
+          ctx.lineWidth = 1
+          ctx.beginPath()
+          for (let y = r0; y < r1; y++) {
+            for (let x = c0; x < c1; x++) {
+              if (chart.cells[y * W + x] !== highlight) continue
+              const x1 = Math.round(ox + x * scale) + 0.5
+              const y1 = Math.round(oy + y * scale) + 0.5
+              const x2 = Math.round(ox + (x + 1) * scale) + 0.5
+              const y2 = Math.round(oy + (y + 1) * scale) + 0.5
+              if (y === 0 || chart.cells[(y - 1) * W + x] !== highlight) { ctx.moveTo(x1, y1); ctx.lineTo(x2, y1) }
+              if (y === H - 1 || chart.cells[(y + 1) * W + x] !== highlight) { ctx.moveTo(x1, y2); ctx.lineTo(x2, y2) }
+              if (x === 0 || chart.cells[y * W + x - 1] !== highlight) { ctx.moveTo(x1, y1); ctx.lineTo(x1, y2) }
+              if (x === W - 1 || chart.cells[y * W + x + 1] !== highlight) { ctx.moveTo(x2, y1); ctx.lineTo(x2, y2) }
+            }
+          }
+          ctx.stroke()
         }
       }
-      for (let i = from; i <= to; i++) {
-        if (i % 5 !== 0 || i % 10 === 0) continue
-        line(i, vertical, 'rgba(0,0,0,0.45)', 1, [4, 3])
+
+      if (!showGrid) return
+
+      // Gridlines span only the visible rectangle, not the whole chart.
+      const line = (i: number, vertical: boolean, style: string, width: number, dash: number[]) => {
+        ctx.strokeStyle = style
+        ctx.lineWidth = width
+        ctx.setLineDash(dash)
+        ctx.beginPath()
+        const p = (vertical ? ox + i * scale : oy + i * scale) + (width % 2 ? 0.5 : 0)
+        if (vertical) { ctx.moveTo(p, vy); ctx.lineTo(p, vy + vh) }
+        else { ctx.moveTo(vx, p); ctx.lineTo(vx + vw, p) }
+        ctx.stroke()
       }
-      for (let i = from; i <= to; i++) {
-        if (i % 10 !== 0) continue
-        line(i, vertical, 'rgba(0,0,0,0.75)', 2, [])
+
+      // Gridlines stay dark in both themes: they mostly cross beads, whose
+      // colours are arbitrary, and a light line would vanish on the many pale
+      // beads.
+      for (const vertical of [true, false]) {
+        const from = vertical ? c0 : r0
+        const to = vertical ? c1 : r1
+        if (scale >= CELL_LINES_AT) {
+          for (let i = from; i <= to; i++) {
+            if (i % 5 === 0) continue
+            line(i, vertical, 'rgba(0,0,0,0.13)', 1, [])
+          }
+        }
+        for (let i = from; i <= to; i++) {
+          if (i % 5 !== 0 || i % 10 === 0) continue
+          line(i, vertical, 'rgba(0,0,0,0.45)', 1, [4, 3])
+        }
+        for (let i = from; i <= to; i++) {
+          if (i % 10 !== 0) continue
+          line(i, vertical, 'rgba(0,0,0,0.75)', 2, [])
+        }
+      }
+      ctx.setLineDash([])
+
+      ctx.strokeStyle = EDGE[theme]
+      ctx.lineWidth = 2
+      ctx.strokeRect(ox, oy, chart.width * scale, chart.height * scale)
+
+      if (scale < CODE_VISIBLE_AT) return
+
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.font = `600 ${Math.round(scale * 0.34)}px ui-monospace, SFMono-Regular, Menlo, monospace`
+      for (let y = r0; y < r1; y++) {
+        for (let x = c0; x < c1; x++) {
+          const idx = chart.cells[y * chart.width + x]
+          if (idx === EMPTY) continue
+          if (highlight !== null && idx !== highlight) continue
+          const bead = PALETTE[idx]
+          ctx.fillStyle = readableInkFor(bead.lab.L)
+          ctx.fillText(bead.code, ox + (x + 0.5) * scale, oy + (y + 0.55) * scale)
+        }
       }
     }
-    ctx.setLineDash([])
 
-    ctx.strokeStyle = EDGE[theme]
-    ctx.lineWidth = 2
-    ctx.strokeRect(ox, oy, w, h)
-
-    if (scale < CODE_VISIBLE_AT) return
-
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.font = `600 ${Math.round(scale * 0.34)}px ui-monospace, SFMono-Regular, Menlo, monospace`
-    for (let y = r0; y < r1; y++) {
-      for (let x = c0; x < c1; x++) {
-        const idx = chart.cells[y * chart.width + x]
-        if (idx === EMPTY) continue
-        if (highlight !== null && idx !== highlight) continue
-        const bead = PALETTE[idx]
-        ctx.fillStyle = readableInkFor(bead.lab.L)
-        ctx.fillText(bead.code, ox + (x + 0.5) * scale, oy + (y + 0.55) * scale)
-      }
-    }
-  }, [chart, bitmap, view, size, showGrid, highlight, dark])
+    const raf = requestAnimationFrame(draw)
+    return () => cancelAnimationFrame(raf)
+  }, [chart, bitmap, view, size, showGrid, highlight, dark, holeTile, repaint])
 
   return (
     <div ref={wrapRef} className="canvas-wrap" onMouseDown={onMouseDown}>

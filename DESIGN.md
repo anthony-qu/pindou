@@ -117,14 +117,23 @@ why are recorded in ROADMAP.md under the shipped R1 entry.
 ## 6. Display
 
 - Canvas grid, pan and zoom, **pinch-zoom and touch panning on mobile**.
-- Nothing in the draw path may scale with the zoom level. The holes are one
-  patterned fill, and every other loop is clamped to the cells actually on screen.
-  An earlier version drew the hole checkerboard as 8px squares across the chart's
-  whole on-screen extent, which cost 1,368,900 `fillRect` calls per redraw at
-  maximum zoom against 7,056 when fitted. Since a pinch redraws on every
-  touchmove, that saturated the main thread and left phones discarding the canvas
-  backing store — which reads as the page going black, because an emptied canvas
-  over a dark background is exactly that.
+- **Nothing in the draw path may be sized by the zoom level.** Every operation is
+  clamped to the cells actually on screen, so the cost of a frame depends on the
+  viewport and nothing else. Two rounds of this were needed:
+  - The hole checkerboard was 8px squares looped across the chart's whole
+    on-screen extent: 1,368,900 `fillRect` calls per redraw at maximum zoom
+    against 7,056 when fitted. Now one patterned fill over the visible rectangle.
+  - `drawImage` was handed the chart's full extent as its destination — a
+    9360×9360 surface at maximum zoom, which a browser may allocate before
+    clipping. Now the nine-argument form draws only the visible sub-rectangle.
+    Painted area per frame fell from 87.6 megapixels to 0.91, and is now bounded
+    by the viewport.
+- Redraws are coalesced into an animation frame. A pinch emits touchmove far more
+  often than the display refreshes, so drawing per event painted each frame
+  several times over.
+- The chart repaints on `visibilitychange`. A phone can discard the canvas
+  backing store while the tab is backgrounded and it returns blank; without this
+  nothing would schedule a repaint, and the chart would stay empty.
 - The canvas backing store is only reallocated when its size changes. Assigning
   `canvas.width` or `canvas.height` reallocates several megabytes and resets the
   context; doing it once per pinch frame was the second half of the same failure.
