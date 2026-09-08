@@ -1,5 +1,5 @@
 import { ciede2000, rgbToLab, type Lab } from '../src/lib/color'
-import { BeadMatcher, PALETTE } from '../src/lib/palette'
+import { ALL_BEADS, BeadMatcher, PALETTE } from '../src/lib/palette'
 import { pixelate, fitGrid } from '../src/lib/pixelate'
 import { buildChart } from '../src/lib/chart'
 
@@ -39,8 +39,19 @@ const mid = rgbToLab(128, 128, 128)
 near('mid grey L', mid.L, 53.585, 0.05)
 
 console.log('\n— palette —')
-console.log(`${PALETTE.length === 291 ? 'ok  ' : 'FAIL'}  291 beads: ${PALETTE.length}`)
-if (PALETTE.length !== 291) fails++
+console.log(`${ALL_BEADS.length === 291 ? 'ok  ' : 'FAIL'}  chart holds 291 codes: ${ALL_BEADS.length}`)
+if (ALL_BEADS.length !== 291) fails++
+console.log(`${PALETTE.length === 222 ? 'ok  ' : 'FAIL'}  222 stocked after excluding P/Q/R/Y/Z: ${PALETTE.length}`)
+if (PALETTE.length !== 222) fails++
+const stray = PALETTE.filter((b) => ['P', 'Q', 'R', 'Y', 'Z'].includes(b.series[0]))
+console.log(`${stray.length === 0 ? 'ok  ' : 'FAIL'}  no excluded series can be matched (${stray.length} leaked)`)
+if (stray.length) fails++
+const dupes = new Map<string, number>()
+for (const b of PALETTE) dupes.set(b.hex, (dupes.get(b.hex) ?? 0) + 1)
+const dupeList = [...dupes.entries()].filter(([, n]) => n > 1)
+console.log(`${dupeList.length === 0 ? 'ok  ' : 'FAIL'}  stocked palette has no duplicate colours (${dupeList.length})`)
+if (dupeList.length) fails++
+console.log(`      indices are contiguous: ${PALETTE.every((b, i) => b.index === i)}`)
 const m = new BeadMatcher()
 const exact = PALETTE.filter((b) => m.match(b.rgb.r, b.rgb.g, b.rgb.b).hex !== b.hex)
 console.log(`${exact.length === 0 ? 'ok  ' : 'FAIL'}  every bead matches its own hex (${exact.length} misses)`)

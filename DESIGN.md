@@ -1,6 +1,6 @@
 # 拼好豆 — image to Mard bead chart
 
-Converts an image into a pixel-bead (拼豆 / perler) template using the Mard 291-color palette,
+Converts an image into a pixel-bead (拼豆 / perler) template using the Mard standard palette,
 and displays it as a zoomable grid where every cell shows its bead code.
 
 Status: design agreed, not yet built. See ROADMAP.md for deferred features.
@@ -11,7 +11,7 @@ Status: design agreed, not yet built. See ROADMAP.md for deferred features.
 
 **Everything runs in the browser. There is no server.**
 
-The whole pipeline — decode image, downsample to a grid, match each cell against 291 colors,
+The whole pipeline — decode image, downsample to a grid, match each cell against the stocked colors,
 draw the result — is milliseconds of work on a canvas. A backend would add hosting cost, upload
 latency, and responsibility for other people's photos, and buy nothing.
 
@@ -20,7 +20,7 @@ Consequences, accepted deliberately:
 - The site is static files. Free hosting, no database, no accounts, no server maintenance.
 - No image ever leaves the user's device. This is a real privacy feature worth stating in the UI.
 - The palette ships inside the app. Updating it means editing a file and redeploying.
-  Fine, because the Mard 291 chart is fixed and will not change.
+  Fine, because the Mard chart is fixed and will not change.
 - Saved projects live in the user's own browser (see ROADMAP R5). Same-device by design.
 
 ## 2. Stack
@@ -49,9 +49,19 @@ plus extended series P, Q, R, T, Y, ZG.
 
 Each entry: `{ code, hex, lab, series }`.
 
-All 291 codes are used in matching. Specialty beads (glitter, glow, transparent) are not
-distinguished — the chart is taken at face value. Decided 2026-09-06: not worth the effort of
-classifying them, and their hex values are close enough in practice.
+**222 of the 291 codes are used for matching.** The extended series — P, Q, R, Y and ZG — are
+specialty beads (glitter, glow-in-the-dark, transparent) that a colour chart cannot honestly
+represent and that this build does not stock; matching against them would produce charts that
+cannot be made. `EXCLUDED_SERIES_PREFIXES` in `palette.ts` is the one place this is decided,
+and `ALL_BEADS` still holds all 291 so restoring them is an edit to one array.
+
+Note that T1 is *not* excluded, though it is part of the 70 extended colours. The exclusion
+follows the letters requested (P/Q/R/Y/Z), which covers 69 of them.
+
+A useful side effect: every duplicate colour on the chart lived in the excluded series — the
+nine identical `#FFFFFF` entries (H2 plus the ZG glow series) and the Q4/R11 pair — so the
+stocked palette has no duplicate colours and matching has no ties to break. The tie-break is
+kept anyway, so ordering stays deterministic if the series are ever restored.
 
 ## 4. Output sizing
 
@@ -77,7 +87,7 @@ Two cleanly separated stages, and the separation is the important part:
     image ──▶ [A] downsample to WxH grid of true colors ──▶ [B] match each cell to a Mard code ──▶ render
                    (expensive, runs once)                      (cheap, re-runs freely)
 
-Stage A is cached. Stage B is 291 distance comparisons per cell — about 3M for the largest canvas,
+Stage A is cached. Stage B is one distance comparison per stocked bead per cell — about 3M for the largest canvas,
 which is a few milliseconds. So changing the palette constraints (inventory, specialty toggle,
 color simplification) re-colors the entire chart instantly with no re-upload and no re-read of the image.
 

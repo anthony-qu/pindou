@@ -13,27 +13,39 @@ export interface Bead {
   index: number
 }
 
-/** All 291 Mard codes, in chart order (A1..A26, B1.., .. ZG8).
+/** Series this build does not stock.
  *
- *  Note: nine codes carry an identical #FFFFFF (H2 plus the whole ZG
- *  glow-in-the-dark series, whose real appearance a colour chart cannot show),
- *  and Q4/R11 are both #FFEBFA. Matching therefore has genuine ties, broken by
- *  `index` so that a white pixel always resolves to H2 rather than arbitrarily
- *  telling you to buy glow-in-the-dark beads.
+ *  The extended Mard series are specialty beads — glitter, glow-in-the-dark,
+ *  transparent — which a colour chart cannot honestly represent, and which
+ *  this build has no supply of. Matching against them would produce charts
+ *  that cannot be made.
  */
-export const PALETTE: Bead[] = (raw as { code: string; hex: string; series: string }[]).map(
-  (b, index) => {
+export const EXCLUDED_SERIES_PREFIXES = ['P', 'Q', 'R', 'Y', 'Z'] as const
+
+/** Every code on the Mard chart, including the ones not stocked. Kept so the
+ *  exclusion is one array away from being changed. */
+export const ALL_BEADS = raw as { code: string; hex: string; series: string }[]
+
+/** The beads actually used for matching: the standard series, in chart order.
+ *
+ *  Removing the extended series also removes every duplicate colour the chart
+ *  contained — the nine identical whites (H2 plus the ZG glow series) and the
+ *  Q4/R11 pair were all in the excluded series, so matching no longer has ties
+ *  to break at all.
+ */
+export const PALETTE: Bead[] = ALL_BEADS
+  .filter((b) => !(EXCLUDED_SERIES_PREFIXES as readonly string[]).includes(b.series[0]))
+  .map((b, index) => {
     const rgb = hexToRgb(b.hex)
     return { ...b, rgb, lab: rgbToLab(rgb.r, rgb.g, rgb.b), index }
-  },
-)
+  })
 
 export const BY_CODE = new Map(PALETTE.map((b) => [b.code, b]))
 
 /** How many CIE76 candidates get re-ranked with the expensive metric.
  *
- *  Full CIEDE2000 against all 291 beads for every cell is ~3.1M evaluations on
- *  a 104x104 chart, which is slow enough to feel. Shortlisting by cheap squared
+ *  Full CIEDE2000 against every bead for each cell is millions of evaluations
+ *  on a 104x104 chart, which is slow enough to feel. Shortlisting by cheap squared
  *  Lab distance and re-ranking only the closest few is indistinguishable in
  *  output and roughly an order of magnitude faster.
  */
@@ -80,8 +92,9 @@ export class BeadMatcher {
       worst = nearD[filled - 1]
     }
 
-    // Stage 2: re-rank the shortlist with CIEDE2000. Ties (the palette holds
-    // nine identical whites) break towards the lower chart index.
+    // Stage 2: re-rank the shortlist with CIEDE2000. The stocked palette holds
+    // no duplicate colours, but the tie-break is kept so the ordering stays
+    // deterministic if the excluded series are ever restored.
     let best = beads[nearI[0]]
     let bestD = Infinity
     for (let i = 0; i < filled; i++) {
