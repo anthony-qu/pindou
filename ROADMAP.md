@@ -52,11 +52,6 @@ Possible extension: track *quantities*, so the count list can say "you are 40 sh
 v1 letterboxes: a 16:9 photo into a 104 square uses only 104x58 and wastes half the canvas.
 Offer crop-to-fill as an alternative, with a draggable crop box.
 
-### R9 — Printable chart
-
-PDF or PNG export: codes in every cell, gridlines every 10, split across pages for large canvases.
-For people who would rather not have a screen on the table.
-
 ### R10 — Image pre-adjustment
 
 Brightness / contrast / saturation sliders before conversion. Photos in particular often need a
@@ -72,6 +67,24 @@ so a 32x32 sprite maps cleanly onto the grid instead of blurring.
 ## Shipped
 
 Kept here because the reasoning still explains why they work the way they do.
+
+### R9 — Printable chart (shipped as PNG export)
+
+Export PNG renders the chart at high resolution: every cell filled and labelled with its bead
+code, counting gridlines dashed at 5 and solid at 10, edge rulers every 10 so you can find
+your place, a header with the project name and totals, and a legend of every code with its
+count. Always drawn on white regardless of the app theme, since it is a document and a dark
+chart is unusable on paper.
+
+Cell size targets a 4600px long edge, clamped to 26-72px, so a 52 grid exports at 72px per
+cell and a 104 grid at 44px. A 104x104 chart comes out around 4700x4100 and 3MB.
+
+The legend's column width is measured from the widest code and count actually present. A
+fixed guess clipped five-digit counts under the next entry's swatch.
+
+Replaced the `.pindou.json` project export at the user's request. `exportProjectFile` and
+`importProjectFile` remain in `projects.ts`, and the landing page can still open a previously
+exported file, but nothing produces one any more.
 
 ### R1 — "Simplify colors" slider
 

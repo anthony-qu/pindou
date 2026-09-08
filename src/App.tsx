@@ -11,9 +11,10 @@ import {
 import { buildChart } from './lib/chart'
 import { buildMergePlan, simplify } from './lib/simplify'
 import {
-  deleteProject, exportProjectFile, imageDataToUrl, importProjectFile, listProjects,
+  deleteProject, imageDataToUrl, importProjectFile, listProjects,
   newId, saveProject, StorageFullError, type SavedProject,
 } from './lib/projects'
+import { downloadChartPng } from './lib/exportPng'
 import { STRINGS, type Lang, type Strings } from './i18n'
 
 /** Stray-bead cleanup is built and tested (see simplify.ts) but is not exposed
@@ -153,16 +154,16 @@ export default function App() {
     }
   }, [image, chart, projectId, projectName, canvasSize, method, target, t])
 
-  const currentProject = useCallback((): SavedProject | null => {
-    if (!image) return null
-    return {
-      id: projectId ?? newId(),
-      name: projectName.trim() || t.untitled,
-      savedAt: Date.now(),
-      image: imageDataToUrl(image),
-      settings: { canvasSize, method, mergeSteps: target, minIsland: MIN_ISLAND },
+  const exportPng = useCallback(async () => {
+    if (!chart) return
+    try {
+      await downloadChartPng(chart, projectName.trim() || t.untitled, {
+        colours: t.coloursUsed, beads: t.totalBeads,
+      })
+    } catch (e) {
+      setError(String(e))
     }
-  }, [image, projectId, projectName, canvasSize, method, target, t])
+  }, [chart, projectName, t])
 
   /* ---------- render ---------- */
 
@@ -335,9 +336,7 @@ export default function App() {
                   onChange={(e) => setProjectName(e.target.value)} aria-label={t.nameProject}
                 />
                 <button className="ghost" onClick={doSave}>{savedFlash ? `✓ ${t.saved}` : t.save}</button>
-                <button className="ghost" onClick={() => { const p = currentProject(); if (p) exportProjectFile(p) }}>
-                  {t.exportFile}
-                </button>
+                <button className="ghost" onClick={exportPng}>{t.exportPng}</button>
               </div>
             </div>
             {error && <p className="drop-error">{error}</p>}
