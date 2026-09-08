@@ -54,6 +54,10 @@ export const STRINGS = {
     savedInBrowser: 'Projects are saved in this browser only.',
     nameProject: 'Project name',
     untitled: 'Untitled',
+    focus: 'Focus',
+    exitFocus: 'Exit focus',
+    layers: 'Layers',
+    focusHint: 'Panels hidden. The screen will stay awake while you bead.',
 
     advanced: 'Advanced',
     advancedTitle: 'Advanced conversion',
@@ -139,6 +143,10 @@ export const STRINGS = {
     savedInBrowser: '作品只保存在这个浏览器里。',
     nameProject: '作品名称',
     untitled: '未命名',
+    focus: '专注模式',
+    exitFocus: '退出专注',
+    layers: '色层',
+    focusHint: '已隐藏面板。拼豆期间屏幕不会自动熄灭。',
 
     advanced: '高级',
     advancedTitle: '高级转换设置',

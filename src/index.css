@@ -319,6 +319,75 @@ input[type="range"]::-moz-range-thumb {
 .muted { color: var(--ink-soft); }
 .muted.small { font-size: 11.5px; margin: 10px 0 0; }
 
+/* ---------- focus mode ---------- */
+
+.primary {
+  border: 2px solid var(--border);
+  background: var(--accent); color: #fff;
+  border-radius: 8px; padding: 7px 13px;
+  font-size: 13px; font-weight: 700; white-space: nowrap;
+}
+.primary:hover { filter: brightness(1.08); }
+
+.focus {
+  position: fixed; inset: 0; z-index: 200;
+  display: flex; background: var(--paper);
+}
+.focus:focus { outline: none; }
+/* Full bleed: in focus mode the chart is the entire interface. */
+.focus > .canvas-wrap { flex: 1; height: auto; border: 0; border-radius: 0; }
+
+.focus-bar {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: max(14px, env(safe-area-inset-bottom));
+  z-index: 210;
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px;
+  background: var(--card);
+  border: 2px solid var(--border);
+  border-radius: 999px;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, .28);
+}
+
+.fb {
+  min-width: 42px; height: 42px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 0 12px;
+  border: 0; border-radius: 999px;
+  background: transparent; color: var(--ink);
+  font-size: 15px; font-weight: 700;
+}
+.fb:hover { background: var(--hover); }
+.fb.on { background: var(--accent-soft); color: var(--accent); }
+.fb.wide { padding: 0 15px; font-size: 13px; }
+.fb b { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; }
+.fb-stack { font-size: 15px; opacity: .75; }
+.fb-swatch {
+  width: 20px; height: 20px; border-radius: 5px;
+  border: 1.5px solid var(--swatch-ring);
+}
+.fb-count { color: var(--ink-soft); font-variant-numeric: tabular-nums; font-weight: 600; }
+
+.focus-layers {
+  position: fixed; z-index: 205;
+  right: 12px; top: 12px; bottom: 74px;
+  width: min(330px, calc(100vw - 24px));
+  display: flex; flex-direction: column;
+  border-radius: 12px; overflow: hidden;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, .3);
+}
+.focus-layers .counts { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.focus-layers .counts-list { flex: 1; max-height: none; overflow-y: auto; }
+
+@media (max-width: 640px) {
+  /* Thumb-reachable: the phone is propped next to the pegboard. */
+  .focus-layers {
+    left: 0; right: 0; top: auto; bottom: 68px;
+    width: 100%; max-height: 58vh;
+    border-radius: 14px 14px 0 0;
+  }
+}
+
 /* ---------- advanced panel ---------- */
 
 .adv-open.tweaked { border-color: var(--accent); color: var(--accent); }

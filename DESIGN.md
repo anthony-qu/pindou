@@ -129,7 +129,31 @@ disappears on zoom out with them.
 Tap-to-tick progress tracking was built and then removed: in practice you do not touch the
 screen while your hands are busy placing beads.
 
-## 8. Saved projects
+## 8. Focus mode
+
+A mode for the half hour you spend actually placing beads, rather than the two minutes
+spent converting. Entered from an accent button in the top bar; everything goes except the
+chart, which then fills the viewport.
+
+What survives is only what you use with beads in your hands:
+
+- **Exit**
+- **Day/night**, because the lamp over a craft table changes and a chart that was readable
+  at 3pm is glare at 9pm
+- **Layers** — the bead list, to isolate one colour and place all of it in one pass. The
+  button doubles as the status readout, showing the active swatch, code and count, so the
+  bar tells you what you are working on without opening anything.
+
+The bar sits bottom-centre rather than in a corner: the phone is propped next to the
+pegboard and that is where a thumb lands. Escape closes the layer list first, then leaves
+focus, so the key never does something drastic when you meant something small.
+
+A **wake lock** is held while focus mode is on. Both hands are busy with tweezers, so
+nothing touches the screen for minutes and the display would otherwise dim exactly when it
+is being read. It is re-acquired on `visibilitychange`, since the browser drops it whenever
+the tab is backgrounded, and it fails silently where unsupported.
+
+## 9. Saved projects
 
 localStorage, plus export/import of a `.pindou.json` file. Same-device by design.
 Projects written by older versions still open — removed fields are simply ignored.
@@ -139,7 +163,7 @@ storage budget. PNG where transparency must survive, JPEG otherwise.
 
 Clearing site data loses saves. That is exactly why the export button is not optional.
 
-## 9. Advanced settings
+## 10. Advanced settings
 
 Seven conversion parameters behind an **Advanced** button, listed in the order the pipeline
 applies them:
@@ -207,7 +231,7 @@ Defaults reproduce the standard conversion exactly, which a test asserts, so Res
 returns to a known baseline. Stored per browser rather than per project: these are tuning
 preferences, not content.
 
-## 10. Theme
+## 11. Theme
 
 Light and dark, toggled in the top bar and remembered, defaulting to the system setting.
 Dark mode darkens the page, the panels, and the surround behind the chart.
@@ -217,7 +241,7 @@ cross beads whose colours are arbitrary and a light line would vanish on the man
 beads. Empty holes stay a mid-grey checkerboard rather than going near-black, so those dark
 gridlines still read where they cross a hole.
 
-## 11. Measured cost
+## 12. Measured cost
 
 Worst case, 104×104 with every cell a distinct colour: stage A ~6ms, stage B ~20ms.
 Merge plan ~8ms, computed once per chart. A slider move re-runs only stage C: ~1ms of work,

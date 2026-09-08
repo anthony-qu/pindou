@@ -3,6 +3,7 @@ import ChartCanvas from './components/ChartCanvas'
 import BeadCounts from './components/BeadCounts'
 import Uploader from './components/Uploader'
 import AdvancedPanel from './components/AdvancedPanel'
+import FocusMode from './components/FocusMode'
 import { decodeToImageData, imageHasAlpha } from './lib/loadImage'
 import { loadAdvanced, saveAdvanced, isDefault } from './lib/settings'
 import {
@@ -58,6 +59,7 @@ export default function App() {
   // count is meaningless once the underlying chart changes, the target is not.
   const [targetColours, setTargetColours] = useState<number | null>(null)
   const [highlight, setHighlight] = useState<number | null>(null)
+  const [focus, setFocus] = useState(false)
 
   const [projects, setProjects] = useState<SavedProject[]>(() => listProjects())
   const [projectId, setProjectId] = useState<string | null>(null)
@@ -167,6 +169,20 @@ export default function App() {
 
   /* ---------- render ---------- */
 
+  if (focus && chart) {
+    return (
+      <FocusMode
+        chart={chart}
+        dark={dark}
+        onToggleTheme={() => setDark((d) => !d)}
+        highlight={highlight}
+        onHighlight={setHighlight}
+        onExit={() => setFocus(false)}
+        t={t}
+      />
+    )
+  }
+
   return (
     <div className="app">
       <header className="topbar">
@@ -185,6 +201,11 @@ export default function App() {
           {image && (
             <button className="ghost" onClick={() => { setSource(null); setError(null); setProjectId(null) }}>
               {t.reset}
+            </button>
+          )}
+          {chart && (
+            <button className="primary" onClick={() => setFocus(true)} title={t.focusHint}>
+              ◱ {t.focus}
             </button>
           )}
           <button
