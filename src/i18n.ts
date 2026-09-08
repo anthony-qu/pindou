@@ -39,6 +39,8 @@ export const STRINGS = {
     workHint: 'One colour isolated. Pick another, or show all.',
     allColours: 'Show all',
     placing: 'Placing',
+    switchLang: '中',
+    switchLangAria: 'Switch to Chinese',
     darkMode: 'Dark mode',
     lightMode: 'Light mode',
 
@@ -128,6 +130,8 @@ export const STRINGS = {
     workHint: '已单独显示一个颜色。可以换一个，或显示全部。',
     allColours: '显示全部',
     placing: '正在拼',
+    switchLang: 'EN',
+    switchLangAria: '切换到英文',
     darkMode: '夜间模式',
     lightMode: '日间模式',
 

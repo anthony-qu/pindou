@@ -208,15 +208,21 @@ export default function App() {
               ◱ {t.focus}
             </button>
           )}
-          <button
-            className="ghost icon"
-            onClick={() => setDark((d) => !d)}
-            aria-label={dark ? t.lightMode : t.darkMode}
-            title={dark ? t.lightMode : t.darkMode}
-          >{dark ? '☀' : '☾'}</button>
-          <div className="langswitch" role="group" aria-label="Language">
-            <button className={lang === 'en' ? 'on' : ''} onClick={() => setLang('en')}>EN</button>
-            <button className={lang === 'zh' ? 'on' : ''} onClick={() => setLang('zh')}>中文</button>
+          {/* Stacked on a phone, side by side elsewhere. Both are toggles, so
+              each is one small button rather than a pair of wide ones. */}
+          <div className="toggles">
+            <button
+              className="ghost icon"
+              onClick={() => setDark((d) => !d)}
+              aria-label={dark ? t.lightMode : t.darkMode}
+              title={dark ? t.lightMode : t.darkMode}
+            >{dark ? '☀' : '☾'}</button>
+            <button
+              className="ghost icon"
+              onClick={() => setLang((l) => (l === 'en' ? 'zh' : 'en'))}
+              aria-label={t.switchLangAria}
+              title={t.switchLangAria}
+            >{t.switchLang}</button>
           </div>
         </div>
       </header>
