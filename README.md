@@ -1,6 +1,6 @@
 # 拼好豆 · 拼豆图纸生成
 
-Turns an image into a pixel-bead (拼豆 / perler) chart using the **Mard standard palette** (222 stocked colours),
+Turns an image into a pixel-bead (拼豆 / perler) chart using the **Mard standard palette** (221 stocked colours),
 and shows it as a zoomable grid where every cell carries its bead code.
 
 The interface is bilingual, but the name is not translated: it is 拼好豆 in both languages.
@@ -77,9 +77,9 @@ deliberately not built yet.
 
 ## Notes on the palette
 
-The full Mard chart holds 291 codes, but the extended series — P, Q, R, Y and ZG — are
+The full Mard chart holds 291 codes, but the extended series — P, Q, R, T, Y and ZG — are
 specialty beads (glitter, glow-in-the-dark, transparent) that a colour chart cannot honestly
-represent and that this build does not stock. They are excluded from matching, leaving **222**.
+represent and that this build does not stock. They are excluded from matching, leaving the **221** standard colours the chart advertises.
 
 That exclusion also removed every duplicate colour on the chart: the nine identical `#FFFFFF`
 entries (H2 plus the whole ZG glow series) and the Q4/R11 pair were all in the excluded

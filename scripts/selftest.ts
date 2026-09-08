@@ -41,10 +41,15 @@ near('mid grey L', mid.L, 53.585, 0.05)
 console.log('\n— palette —')
 console.log(`${ALL_BEADS.length === 291 ? 'ok  ' : 'FAIL'}  chart holds 291 codes: ${ALL_BEADS.length}`)
 if (ALL_BEADS.length !== 291) fails++
-console.log(`${PALETTE.length === 222 ? 'ok  ' : 'FAIL'}  222 stocked after excluding P/Q/R/Y/Z: ${PALETTE.length}`)
-if (PALETTE.length !== 222) fails++
-const stray = PALETTE.filter((b) => ['P', 'Q', 'R', 'Y', 'Z'].includes(b.series[0]))
-console.log(`${stray.length === 0 ? 'ok  ' : 'FAIL'}  no excluded series can be matched (${stray.length} leaked)`)
+console.log(`${PALETTE.length === 221 ? 'ok  ' : 'FAIL'}  221 standard beads stocked: ${PALETTE.length}`)
+if (PALETTE.length !== 221) fails++
+const stray = PALETTE.filter((b) => ['P', 'Q', 'R', 'T', 'Y', 'Z'].includes(b.series[0]))
+console.log(`${stray.length === 0 ? 'ok  ' : 'FAIL'}  no extended series can be matched (${stray.length} leaked)`)
+const seriesUsed = [...new Set(PALETTE.map((b) => b.series))].sort()
+const expected = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'M']
+const seriesOk = seriesUsed.join() === expected.join()
+console.log(`${seriesOk ? 'ok  ' : 'FAIL'}  only the standard series remain: ${seriesUsed.join(' ')}`)
+if (!seriesOk) fails++
 if (stray.length) fails++
 const dupes = new Map<string, number>()
 for (const b of PALETTE) dupes.set(b.hex, (dupes.get(b.hex) ?? 0) + 1)

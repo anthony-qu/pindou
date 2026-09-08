@@ -19,14 +19,17 @@ export interface Bead {
  *  transparent — which a colour chart cannot honestly represent, and which
  *  this build has no supply of. Matching against them would produce charts
  *  that cannot be made.
+ *
+ *  Excluding all six leaves the 221 standard colours the source chart
+ *  advertises: A-H plus M.
  */
-export const EXCLUDED_SERIES_PREFIXES = ['P', 'Q', 'R', 'Y', 'Z'] as const
+export const EXCLUDED_SERIES_PREFIXES = ['P', 'Q', 'R', 'T', 'Y', 'Z'] as const
 
 /** Every code on the Mard chart, including the ones not stocked. Kept so the
  *  exclusion is one array away from being changed. */
 export const ALL_BEADS = raw as { code: string; hex: string; series: string }[]
 
-/** The beads actually used for matching: the standard series, in chart order.
+/** The 221 standard beads used for matching, in chart order.
  *
  *  Removing the extended series also removes every duplicate colour the chart
  *  contained — the nine identical whites (H2 plus the ZG glow series) and the

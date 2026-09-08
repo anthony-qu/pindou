@@ -49,14 +49,12 @@ plus extended series P, Q, R, T, Y, ZG.
 
 Each entry: `{ code, hex, lab, series }`.
 
-**222 of the 291 codes are used for matching.** The extended series — P, Q, R, Y and ZG — are
+**221 of the 291 codes are used for matching.** The extended series — P, Q, R, T, Y and ZG — are
 specialty beads (glitter, glow-in-the-dark, transparent) that a colour chart cannot honestly
 represent and that this build does not stock; matching against them would produce charts that
-cannot be made. `EXCLUDED_SERIES_PREFIXES` in `palette.ts` is the one place this is decided,
-and `ALL_BEADS` still holds all 291 so restoring them is an edit to one array.
-
-Note that T1 is *not* excluded, though it is part of the 70 extended colours. The exclusion
-follows the letters requested (P/Q/R/Y/Z), which covers 69 of them.
+cannot be made. Excluding all six leaves exactly the 221 standard colours the source chart advertises: A-H
+plus M. `EXCLUDED_SERIES_PREFIXES` in `palette.ts` is the one place this is decided, and
+`ALL_BEADS` still holds all 291 so restoring a series is an edit to one array.
 
 A useful side effect: every duplicate colour on the chart lived in the excluded series — the
 nine identical `#FFFFFF` entries (H2 plus the ZG glow series) and the Q4/R11 pair — so the
