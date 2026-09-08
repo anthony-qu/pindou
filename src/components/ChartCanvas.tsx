@@ -38,6 +38,25 @@ interface Props {
   dark: boolean
 }
 
+/** One tile of the transparent-cell checkerboard: 2x2 squares of 8px.
+ *  Painted as a repeating pattern so the cost of the holes is one fill,
+ *  independent of zoom. */
+function useHoleTile(dark: boolean) {
+  return useMemo(() => {
+    const [a, b] = HOLES[dark ? 'dark' : 'light']
+    const t = document.createElement('canvas')
+    t.width = 16
+    t.height = 16
+    const g = t.getContext('2d')!
+    g.fillStyle = b
+    g.fillRect(0, 0, 16, 16)
+    g.fillStyle = a
+    g.fillRect(8, 0, 8, 8)
+    g.fillRect(0, 8, 8, 8)
+    return t
+  }, [dark])
+}
+
 /** Renders the chart at 1px per cell once, then scales it up with smoothing
  *  off. Far cheaper than issuing thousands of fillRect calls every frame, and
  *  it keeps bead edges crisp at any zoom. */
@@ -69,6 +88,7 @@ export default function ChartCanvas({ chart, showGrid, highlight, dark }: Props)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   const bitmap = useChartBitmap(chart)
+  const holeTile = useHoleTile(dark)
 
   const [view, setView] = useState({ scale: 1, ox: 0, oy: 0 })
   const [size, setSize] = useState({ w: 0, h: 0 })
@@ -186,9 +206,17 @@ export default function ChartCanvas({ chart, showGrid, highlight, dark }: Props)
     if (!canvas || !size.w || !size.h) return
     const theme = dark ? 'dark' : 'light'
     const dpr = window.devicePixelRatio || 1
-    canvas.width = size.w * dpr
-    canvas.height = size.h * dpr
     const ctx = canvas.getContext('2d')!
+    // Assigning width or height reallocates the backing store — several
+    // megabytes — and resets the context, so only do it when the size actually
+    // changed. Previously every pinch frame reallocated, which is what pushes a
+    // phone into discarding the canvas.
+    const wantW = Math.round(size.w * dpr)
+    const wantH = Math.round(size.h * dpr)
+    if (canvas.width !== wantW || canvas.height !== wantH) {
+      canvas.width = wantW
+      canvas.height = wantH
+    }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.clearRect(0, 0, size.w, size.h)
 
@@ -197,17 +225,19 @@ export default function ChartCanvas({ chart, showGrid, highlight, dark }: Props)
     const h = chart.height * scale
 
     // Empty cells must read as holes, not as white beads.
+    //
+    // Drawn as one patterned fill rather than a loop of 8px squares. The loop
+    // covered the chart's whole on-screen extent, not just the visible part, so
+    // its cost grew with the square of the zoom: 1,368,900 fillRect calls per
+    // redraw at maximum zoom on a 104 grid, against 7,056 when fitted. A pinch
+    // redraws on every touchmove, which saturated the main thread and left
+    // phones discarding the canvas backing store — the reported black screen.
     ctx.save()
-    ctx.beginPath()
-    ctx.rect(ox, oy, w, h)
-    ctx.clip()
-    const [holeA, holeB] = HOLES[theme]
-    const sq = 8
-    for (let y = 0; y < Math.ceil(h / sq); y++) {
-      for (let x = 0; x < Math.ceil(w / sq); x++) {
-        ctx.fillStyle = (x + y) % 2 ? holeA : holeB
-        ctx.fillRect(ox + x * sq, oy + y * sq, sq, sq)
-      }
+    ctx.translate(ox, oy)
+    const holes = ctx.createPattern(holeTile, 'repeat')
+    if (holes) {
+      ctx.fillStyle = holes
+      ctx.fillRect(0, 0, w, h)
     }
     ctx.restore()
 

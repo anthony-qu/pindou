@@ -117,6 +117,17 @@ why are recorded in ROADMAP.md under the shipped R1 entry.
 ## 6. Display
 
 - Canvas grid, pan and zoom, **pinch-zoom and touch panning on mobile**.
+- Nothing in the draw path may scale with the zoom level. The holes are one
+  patterned fill, and every other loop is clamped to the cells actually on screen.
+  An earlier version drew the hole checkerboard as 8px squares across the chart's
+  whole on-screen extent, which cost 1,368,900 `fillRect` calls per redraw at
+  maximum zoom against 7,056 when fitted. Since a pinch redraws on every
+  touchmove, that saturated the main thread and left phones discarding the canvas
+  backing store — which reads as the page going black, because an emptied canvas
+  over a dark background is exactly that.
+- The canvas backing store is only reallocated when its size changes. Assigning
+  `canvas.width` or `canvas.height` reallocates several megabytes and resets the
+  context; doing it once per pinch frame was the second half of the same failure.
 - Bead codes fade in above the zoom level where they would actually be legible.
   Codes and the whole picture cannot be visible simultaneously — that is a screen-size limit,
   not a design choice.
