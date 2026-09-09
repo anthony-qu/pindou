@@ -63,7 +63,17 @@ kept anyway, so ordering stays deterministic if the series are ever restored.
 
 ## 4. Output sizing
 
-Preset square canvases only: **52x52, 78x78, 104x104**.
+Preset square canvases — **52x52, 78x78, 104x104** — plus **Custom**, any square size
+from **16 to 200** beads.
+
+The floor is where there is too little grid left to recognise anything. The ceiling is set by
+the PNG export, not by conversion: conversion stays under 200ms well past 200, but the export
+clamps its cell to 26px so codes stay legible, which means beyond ~180 cells the image simply
+grows, and by 320 it exceeds what browsers will allocate. 200x200 is also 40,000 beads, about
+a metre square in real life, so the limit is generous for the craft as well as for the code.
+
+Typing applies live, but only once the number is in range — otherwise "1" on the way to "120"
+would convert at a one-bead canvas. Out-of-range values are clamped on blur.
 
 Output preserves the input aspect ratio and fits inside the chosen square as large as possible
 (letterbox — no cropping in v1). A 4:3 photo at 78 becomes 78x58.

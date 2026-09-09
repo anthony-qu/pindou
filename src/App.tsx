@@ -7,7 +7,8 @@ import FocusMode from './components/FocusMode'
 import { decodeToImageData, imageHasAlpha } from './lib/loadImage'
 import { loadAdvanced, saveAdvanced, isDefault } from './lib/settings'
 import {
-  CANVAS_SIZES, DEFAULT_PIXELATE, fitGrid, pixelate, type CanvasSize, type SampleMethod,
+  CANVAS_SIZES, DEFAULT_PIXELATE, MAX_CANVAS, MIN_CANVAS, clampCanvas, fitGrid, pixelate,
+  type CanvasSize, type SampleMethod,
 } from './lib/pixelate'
 import { buildChart } from './lib/chart'
 import { buildMergePlan, simplify } from './lib/simplify'
@@ -52,6 +53,11 @@ export default function App() {
   const [image, setImage] = useState<ImageData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [canvasSize, setCanvasSize] = useState<CanvasSize>(78)
+  // `canvasSize` stays the single source of truth. These only track the custom
+  // control: whether it is selected, and the raw text while it is being typed,
+  // which may briefly be empty or out of range.
+  const [customMode, setCustomMode] = useState(false)
+  const [customText, setCustomText] = useState('120')
   const [method, setMethod] = useState<SampleMethod>('average')
   const [showGrid, setShowGrid] = useState(true)
 
@@ -282,12 +288,58 @@ export default function App() {
             <div className="controls">
               <div className="ctrl">
                 <label>{t.canvasSize}</label>
-                <div className="seg">
-                  {CANVAS_SIZES.map((s) => (
-                    <button key={s} className={canvasSize === s ? 'on' : ''} onClick={() => setCanvasSize(s)}>
-                      {s}×{s}
+                <div className="sizerow">
+                  <div className="seg">
+                    {CANVAS_SIZES.map((s) => (
+                      <button
+                        key={s}
+                        className={!customMode && canvasSize === s ? 'on' : ''}
+                        onClick={() => { setCustomMode(false); setCanvasSize(s) }}
+                      >
+                        {s}×{s}
+                      </button>
+                    ))}
+                    <button
+                      className={customMode ? 'on' : ''}
+                      title={t.customSizeHint}
+                      onClick={() => {
+                        setCustomMode(true)
+                        setCanvasSize(clampCanvas(Number(customText) || 120))
+                      }}
+                    >
+                      {t.custom}
                     </button>
-                  ))}
+                  </div>
+
+                  {customMode && (
+                    <div className="sizecustom">
+                      <input
+                        type="number" inputMode="numeric"
+                        min={MIN_CANVAS} max={MAX_CANVAS} step={1}
+                        value={customText}
+                        title={t.customSizeHint}
+                        aria-label={t.canvasSize}
+                        onChange={(e) => {
+                          const raw = e.target.value
+                          setCustomText(raw)
+                          // Apply while typing, but only once the number is
+                          // usable — otherwise "1" on the way to "120" would
+                          // convert at a 1-bead canvas.
+                          const n = Number(raw)
+                          if (raw !== '' && Number.isFinite(n) && n >= MIN_CANVAS && n <= MAX_CANVAS) {
+                            setCanvasSize(Math.round(n))
+                          }
+                        }}
+                        onBlur={() => {
+                          const n = clampCanvas(Number(customText) || canvasSize)
+                          setCustomText(String(n))
+                          setCanvasSize(n)
+                        }}
+                      />
+                      {/* The canvas is always square; show what is actually applied. */}
+                      <span className="sizesq">× {canvasSize}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 

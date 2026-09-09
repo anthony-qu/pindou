@@ -76,7 +76,23 @@ export interface ColorGrid {
 
 /** Canvas presets, in beads. Square boards; the image is fitted inside. */
 export const CANVAS_SIZES = [52, 78, 104] as const
-export type CanvasSize = (typeof CANVAS_SIZES)[number]
+
+/** Bounds for a custom square canvas.
+ *
+ *  Below 16 there is not enough grid left to recognise anything. The ceiling is
+ *  set by the PNG export rather than by conversion, which stays under 200ms
+ *  well past it: the export clamps its cell to 26px so codes stay legible, so
+ *  beyond ~180 cells the image simply grows, and by 320 it exceeds what
+ *  browsers will allocate. 200x200 is also 40,000 beads — around a metre square
+ *  in real life — so the limit is generous for the craft as well as the code.
+ */
+export const MIN_CANVAS = 16
+export const MAX_CANVAS = 200
+
+export type CanvasSize = number
+
+export const clampCanvas = (n: number): number =>
+  Math.max(MIN_CANVAS, Math.min(MAX_CANVAS, Math.round(n)))
 
 /** Largest grid with the image's aspect ratio that fits inside a square canvas. */
 export function fitGrid(imgW: number, imgH: number, canvas: number) {

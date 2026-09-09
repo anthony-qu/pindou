@@ -140,6 +140,22 @@ button { font: inherit; cursor: pointer; }
   letter-spacing: .07em; color: var(--ink-soft);
 }
 
+.sizerow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.sizecustom { display: flex; align-items: center; gap: 6px; }
+.sizecustom input {
+  width: 72px;
+  border: 2px solid var(--border); border-radius: 9px;
+  background: var(--card); color: var(--ink);
+  padding: 7px 8px; font: inherit; font-size: 13px; font-weight: 700;
+  font-variant-numeric: tabular-nums; text-align: right;
+}
+.sizecustom input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.sizesq {
+  font-size: 13px; font-weight: 700; color: var(--ink-soft);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+
 .seg { display: flex; border: 2px solid var(--border); border-radius: 9px; overflow: hidden; }
 .seg button {
   border: 0; border-right: 2px solid var(--border);
