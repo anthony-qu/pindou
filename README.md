@@ -7,8 +7,6 @@ and shows it as a zoomable grid where every cell carries its bead code.
 
 ### → [pindou.anthonyylq.workers.dev](https://pindou.anthonyylq.workers.dev)
 
-No install, no account, nothing to set up. The whole conversion runs in your browser, so
-your image never leaves your device.
 
 
 |                                                       Design mode                                                       |                                                         Working mode                                                         |
