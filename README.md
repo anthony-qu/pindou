@@ -1,18 +1,13 @@
 # 拼好豆 · 拼豆图纸生成
 
-Turns an image into a pixel-bead (拼豆 / perler) chart using the **Mard standard palette** (221 stocked colours),
-and shows it as a zoomable grid where every cell carries its bead code.
-
-## Try it
-
-### → [pindou.anthonyylq.workers.dev](https://pindou.anthonyylq.workers.dev)
-
-
-
+**Try it**
+[pindou.anthonyylq.workers.dev](https://pindou.anthonyylq.workers.dev)
 |                                                       Design mode                                                       |                                                         Working mode                                                         |
 | :----------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------------: |
 | <img src="docs/design-mode.png" alt="The editor: canvas size, detail, colour simplification and the chart" width="100%"> | <img src="docs/working-mode.png" alt="Focus mode: panels hidden, one colour layer isolated, the bead list open" width="100%"> |
 |                                                  Setting up the canvas.                                                  |                                      **专注模式 / Focus** view for while you are working                                      |
+
+
 
 ## How to use
 

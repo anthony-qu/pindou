@@ -4,3 +4,9 @@ dist
 *.local
 .tmp
 *.tsbuildinfo
+
+# Working notes, kept locally rather than in the repo. They stay in git history
+# if you ever want them back: `git show aea3a1f:ROADMAP.md`
+DESIGN.md
+ROADMAP.md
+scripts/diag.ts
