@@ -8,11 +8,16 @@ The interface is bilingual, but the name is not translated: it is 拼好豆 in b
 Everything runs in the browser. No server, no accounts, no uploads — your image never
 leaves your device.
 
+| Design mode | Working mode |
+| :---: | :---: |
+| <img src="docs/design-mode.png" alt="The editor: canvas size, detail, colour simplification and the chart" width="100%"> | <img src="docs/working-mode.png" alt="Focus mode: panels hidden, one colour layer isolated, the bead list open" width="100%"> |
+| Set the canvas, the detail and how many colours you are willing to buy. | The **专注模式 / Focus** view for while you bead: panels gone, one colour layer isolated at a time. |
+
 ## What it does
 
 1. **Upload** any image (PNG, JPG, WebP, GIF).
-2. **Pick a canvas** — 52×52, 78×78 or 104×104 beads. The image keeps its aspect ratio and
-   fills the canvas as far as it can.
+2. **Pick a canvas** — 52×52, 78×78, 104×104, or any custom square from 16 to 200 beads. The
+   image keeps its aspect ratio and fills the canvas as far as it can.
 3. **Pixelate**, with two sampling methods:
    - **Smooth** averages each cell — right for photos.
    - **Sharp** takes the dominant colour in each cell — right for anime, logos and sprites,
