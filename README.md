@@ -21,3 +21,10 @@
 6. **Save** — projects are kept in this browser, and can be exported to a file you control.
 
 Light and dark themes, English and Chinese, and built mobile-first.
+
+## License
+
+[MIT](LICENSE) — free to use, modify and redistribute, including commercially,
+provided the copyright notice is kept.
+
+The cat icon is not mine and is not covered by that grant.
